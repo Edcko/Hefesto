@@ -25,3 +25,6 @@ test-workspace/
 
 # Go binary
 cmd/hefesto/hefesto
+
+# Release artifacts
+checksums.txt

@@ -1,0 +1,208 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: darwin
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: linux
+            goarch: amd64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: cmd/hefesto/go.sum
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Build binary
+        working-directory: cmd/hefesto
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          BINARY_NAME="hefesto-${GOOS}-${GOARCH}"
+          go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o "../../dist/${BINARY_NAME}" .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hefesto-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/hefesto-${{ matrix.goos }}-${{ matrix.goarch }}
+          retention-days: 1
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Releasing version: $VERSION"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: hefesto-*
+          merge-multiple: true
+
+      - name: Generate checksums
+        working-directory: dist
+        run: |
+          sha256sum hefesto-* > checksums.txt
+          echo "Checksums:"
+          cat checksums.txt
+
+      - name: Create release notes
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          cat > /tmp/release-notes.md << 'EOF'
+          ## Hefesto $VERSION
+
+          TUI installer for OpenCode configuration.
+
+          ### Installation
+
+          ```bash
+          brew install edcko/tap/hefesto
+          ```
+
+          ### Binaries
+
+          | Platform | Architecture | Binary |
+          |----------|-------------|--------|
+          | macOS | ARM64 (M1/M2/M3) | `hefesto-darwin-arm64` |
+          | macOS | AMD64 (Intel) | `hefesto-darwin-amd64` |
+          | Linux | ARM64 | `hefesto-linux-arm64` |
+          | Linux | AMD64 | `hefesto-linux-amd64` |
+
+          ### Checksums
+
+          See `checksums.txt` for SHA256 checksums.
+          EOF
+          sed -i "s/\$VERSION/$VERSION/g" /tmp/release-notes.md
+          cat /tmp/release-notes.md
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          
+          # Check if release exists and delete it
+          if gh release view $VERSION >/dev/null 2>&1; then
+            echo "Release $VERSION already exists, deleting..."
+            gh release delete $VERSION --yes
+          fi
+          
+          # Create release
+          gh release create $VERSION \
+            --title "Hefesto $VERSION" \
+            --notes-file /tmp/release-notes.md \
+            dist/hefesto-darwin-arm64 \
+            dist/hefesto-darwin-amd64 \
+            dist/hefesto-linux-arm64 \
+            dist/hefesto-linux-amd64 \
+            dist/checksums.txt
+
+      - name: Update Homebrew Formula
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          VERSION_NUM="${VERSION#v}"
+          
+          # Download checksums from release
+          gh release download $VERSION --pattern checksums.txt --dir ./dist
+          
+          # Extract checksums
+          DARWIN_ARM64=$(grep "hefesto-darwin-arm64" dist/checksums.txt | awk '{print $1}')
+          DARWIN_AMD64=$(grep "hefesto-darwin-amd64" dist/checksums.txt | awk '{print $1}')
+          LINUX_ARM64=$(grep "hefesto-linux-arm64" dist/checksums.txt | awk '{print $1}')
+          LINUX_AMD64=$(grep "hefesto-linux-amd64" dist/checksums.txt | awk '{print $1}')
+          
+          echo "Checksums extracted:"
+          echo "  darwin-arm64:  $DARWIN_ARM64"
+          echo "  darwin-amd64:  $DARWIN_AMD64"
+          echo "  linux-arm64:   $LINUX_ARM64"
+          echo "  linux-amd64:   $LINUX_AMD64"
+          
+          # Update Formula/hefesto.rb
+          sed -i "s/version \".*\"/version \"$VERSION_NUM\"/" Formula/hefesto.rb
+          sed -i "s/CHECKSUM_DARWIN_ARM64/$DARWIN_ARM64/" Formula/hefesto.rb
+          sed -i "s/CHECKSUM_DARWIN_AMD64/$DARWIN_AMD64/" Formula/hefesto.rb
+          sed -i "s/CHECKSUM_LINUX_ARM64/$LINUX_ARM64/" Formula/hefesto.rb
+          sed -i "s/CHECKSUM_LINUX_AMD64/$LINUX_AMD64/" Formula/hefesto.rb
+          
+          echo "Formula updated:"
+          cat Formula/hefesto.rb
+
+      - name: Commit and push updated Formula
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add Formula/hefesto.rb
+          git commit -m "chore: update formula to ${{ steps.version.outputs.version }}" || echo "No changes to commit"
+          git push
+
+  notify:
+    name: Notify
+    needs: release
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Release Success
+        run: |
+          echo "✅ Release completed successfully!"
+          echo "Install with: brew install edcko/tap/hefesto"
