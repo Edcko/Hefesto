@@ -151,14 +151,18 @@
   },
   "autoupdate": true,
   "mcp": {
-    "engram": {
-      "type": "local",
-      "command": "engram",
-      "args": ["mcp", "--tools=agent"]
-    },
     "context7": {
+      "enabled": true,
       "type": "remote",
       "url": "https://mcp.context7.com/mcp"
+    },
+    "engram": {
+      "command": [
+        "engram",
+        "mcp"
+      ],
+      "enabled": true,
+      "type": "local"
     }
   },
   "permission": {
@@ -181,5 +185,5 @@
       "*.env.*": "deny"
     }
   },
-  "plugins": ["opencode-gemini-auth@latest"]
+  "plugin": ["opencode-gemini-auth@latest"]
 }
