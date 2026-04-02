@@ -43,6 +43,7 @@
     "sdd-orchestrator": {
       "description": "SDD coordinator — coordinates sub-agents, never does work inline",
       "mode": "all",
+      "steps": 100,
       "permission": {
         "task": {
           "*": "deny",
@@ -62,6 +63,7 @@
       "description": "Bootstrap SDD context and project configuration",
       "hidden": true,
       "mode": "subagent",
+      "steps": 20,
       "model": "zai-coding-plan/glm-5",
       "prompt": "You are an SDD sub-agent for the init phase. Read your skill file at ~/.config/opencode/skills/sdd-init/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
       "tools": {
@@ -75,6 +77,7 @@
       "description": "Explore codebase and create change proposals",
       "hidden": true,
       "mode": "subagent",
+      "steps": 40,
       "model": "zai-coding-plan/glm-5",
       "prompt": "You are an SDD sub-agent for the plan phase (merged explore + propose). Read your skill files at ~/.config/opencode/skills/sdd-explore/SKILL.md and ~/.config/opencode/skills/sdd-propose/SKILL.md, then follow their instructions. Step 1 in each skill is loading the registry — do NOT skip it.",
       "tools": {
@@ -88,6 +91,7 @@
       "description": "Write detailed specifications from proposals",
       "hidden": true,
       "mode": "subagent",
+      "steps": 40,
       "model": "zai-coding-plan/glm-5",
       "prompt": "You are an SDD sub-agent for the spec phase. Read your skill file at ~/.config/opencode/skills/sdd-spec/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
       "tools": {
@@ -101,6 +105,7 @@
       "description": "Break down specs and designs into implementation tasks",
       "hidden": true,
       "mode": "subagent",
+      "steps": 35,
       "model": "zai-coding-plan/glm-5",
       "prompt": "You are an SDD sub-agent for the tasks phase. Read your skill file at ~/.config/opencode/skills/sdd-tasks/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
       "tools": {
@@ -114,6 +119,7 @@
       "description": "Implement code changes from task definitions",
       "hidden": true,
       "mode": "subagent",
+      "steps": 75,
       "model": "zai-coding-plan/glm-5",
       "prompt": "You are an SDD sub-agent for the apply phase. Read your skill file at ~/.config/opencode/skills/sdd-apply/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
       "tools": {
@@ -127,6 +133,7 @@
       "description": "Validate implementation against specs",
       "hidden": true,
       "mode": "subagent",
+      "steps": 30,
       "model": "zai-coding-plan/glm-5",
       "prompt": "You are an SDD sub-agent for the verify phase. Read your skill file at ~/.config/opencode/skills/sdd-verify/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
       "tools": {
