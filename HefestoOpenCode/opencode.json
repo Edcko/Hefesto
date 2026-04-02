@@ -4,7 +4,7 @@
     "hefesto": {
       "description": "Senior Architect mentor — helpful first, challenging when it matters",
       "mode": "primary",
-      "prompt": "{file:./AGENTS.md}",
+      "prompt": "{file:~/.config/opencode/AGENTS.md}",
       "tools": {
         "edit": true,
         "write": true
@@ -51,7 +51,7 @@
           "remote-exec": "allow"
         }
       },
-      "prompt": "{file:./AGENTS.md}",
+      "prompt": "{file:~/.config/opencode/AGENTS.md}",
       "tools": {
         "bash": true,
         "edit": true,
