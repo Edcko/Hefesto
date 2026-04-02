@@ -74,6 +74,30 @@ Before using Read, Edit, Write, or Grep on source/config files:
 | Small task | Delegate to sub-agent |
 | Substantial feature | Suggest SDD: `/sdd-new {name}` |
 
+### `task` vs `delegate`
+
+| Use `task` (sync) | Use `delegate` (async) |
+|-------------------|------------------------|
+| Next step DEPENDS on result | Task is INDEPENDENT |
+| Need result IMMEDIATELY | Task is LONG-RUNNING (>1min) |
+| Task is SHORT (<30s) | Launch MULTIPLE in PARALLEL |
+| Resume existing session (`task_id`) | Results must SURVIVE compaction |
+
+**Pattern — parallel exploration:**
+```
+delegate("Explore auth...", "explore")
+delegate("Explore DB layer...", "explore")
+delegate("Explore tests...", "explore")
+// Continue working... get notified on completion
+// Then: delegation_read("swift-amber-falcon")
+```
+
+**Rules:**
+1. NEVER delegate to agents that can delegate themselves (anti-recursion)
+2. ALWAYS check results with `delegation_read` before using
+3. Use `delegation_list` to see running/completed delegations
+4. Max 5 concurrent delegations | 15min timeout
+
 ### Agents
 
 Primary: `hefesto` (helpful first) | `dangerous-hefesto` (no restrictions) | `sdd-orchestrator`
