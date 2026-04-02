@@ -22,3 +22,6 @@ node_modules/
 credentials.json
 secrets/
 test-workspace/
+
+# Go binary
+cmd/hefesto/hefesto

@@ -1,0 +1,7 @@
+{
+  "name": "hefesto-opencode",
+  "private": true,
+  "dependencies": {
+    "@opencode-ai/plugin": "latest"
+  }
+}
