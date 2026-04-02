@@ -144,16 +144,63 @@ Orchestrator resolves skill paths ONCE per session:
 
 Persistent memory surviving sessions and compactions.
 
-### Save Triggers (MANDATORY)
+### WHEN TO SAVE (mandatory — not optional)
 
-After: bug fix, design decision, discovery, config change, pattern established, user preference.
+Call `mem_save` IMMEDIATELY after any of these:
+- Bug fix completed
+- Architecture or design decision made
+- Non-obvious discovery about the codebase
+- Configuration change or environment setup
+- Pattern established (naming, structure, convention)
+- User preference or constraint learned
 
-**Format**: `title: Verb + what`, `type: bugfix|decision|architecture|discovery|pattern|config`, `topic_key: stable key`, `content: What/Why/Where/Learned`.
+Format for `mem_save`:
+- **title**: Verb + what — short, searchable (e.g. "Fixed N+1 query in UserList", "Chose Zustand over Redux")
+- **type**: bugfix | decision | architecture | discovery | pattern | config | preference
+- **topic_key** (optional, recommended for evolving decisions): stable key like `architecture/auth-model`
+- **content**: **What** (one sentence), **Why** (motivation), **Where** (files/paths), **Learned** (gotchas, omit if none)
 
-### Session Close
+Topic rules:
+- Reuse the same `topic_key` to update an evolving topic instead of creating new observations
+- If unsure about the key, call `mem_suggest_topic_key` first and then reuse it
+- Use `mem_update` when you have an exact observation ID to correct
 
-Before ending: `mem_session_summary` with Goal, Instructions (optional), Discoveries, Accomplished, Next Steps, Relevant Files.
+### WHEN TO SEARCH MEMORY
 
-### After Compaction
+When the user asks to recall something — "remember", "recall", "what did we do", "recordar", "acordate", "qué hicimos", or references to past work:
+1. First call `mem_context` — checks recent session history (fast, cheap)
+2. If not found, call `mem_search` with relevant keywords (FTS5 full-text search)
+3. If you find a match, use `mem_get_observation` for full untruncated content
 
-1. `mem_session_summary` with compacted content → 2. `mem_context` → 3. Continue
+Also search memory PROACTIVELY when:
+- Starting work on something that might have been done before
+- The user mentions a topic you have no context on — check if past sessions covered it
+
+### SESSION CLOSE PROTOCOL (mandatory)
+
+Before ending a session, you MUST call `mem_session_summary` with:
+
+```
+## Goal
+[What we were working on this session]
+## Instructions
+[User preferences or constraints discovered — skip if none]
+## Discoveries
+- [Technical findings, gotchas, non-obvious learnings]
+## Accomplished
+- ✅ [Completed items with key details]
+- 🔲 [What remains — for next session]
+## Relevant Files
+- path/to/file — [what it does or what changed]
+```
+
+This is NOT optional. If you skip this, the next session starts blind.
+
+### AFTER COMPACTION
+
+If you see a message about compaction, context reset, or "FIRST ACTION REQUIRED":
+1. IMMEDIATELY call `mem_session_summary` with the compacted summary — this persists what was done before compaction
+2. Then call `mem_context` to recover additional context from previous sessions
+3. Only THEN continue working
+
+Do not skip step 1. Without it, everything done before compaction is lost from memory.
