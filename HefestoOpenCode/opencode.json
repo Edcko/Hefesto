@@ -157,10 +157,7 @@
       "url": "https://mcp.context7.com/mcp"
     },
     "engram": {
-      "command": [
-        "engram",
-        "mcp"
-      ],
+      "command": ["engram", "mcp"],
       "enabled": true,
       "type": "local"
     }

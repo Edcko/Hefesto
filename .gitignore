@@ -21,3 +21,4 @@ node_modules/
 .env.*
 credentials.json
 secrets/
+test-workspace/
