@@ -13,10 +13,11 @@ import (
 
 // VerifyResult holds the results of post-install verification.
 type VerifyResult struct {
-	ConfigCopied  bool     // Whether opencode.json exists and is valid
-	NpmInstalled  bool     // Whether node_modules/@opencode-ai/plugin exists
-	OpenCodeWorks bool     // Whether opencode --version runs successfully
-	Errors        []string // List of errors encountered during verification
+	ConfigCopied    bool     // Whether opencode.json exists and is valid
+	NpmInstalled    bool     // Whether node_modules/@opencode-ai/plugin exists
+	OpenCodeWorks   bool     // Whether opencode --version runs successfully
+	EngramInstalled bool     // Whether engram CLI is installed
+	Errors          []string // List of errors encountered during verification
 }
 
 // Verify performs post-installation verification checks.
@@ -39,6 +40,9 @@ func Verify(configPath string) (*VerifyResult, error) {
 
 	// Try opencode --version to verify OpenCode still works
 	result.OpenCodeWorks = verifyOpenCodeWorks(result)
+
+	// Check engram installation
+	result.EngramInstalled = verifyEngramWorks(result)
 
 	return result, nil
 }
@@ -94,6 +98,20 @@ func verifyOpenCodeWorks(result *VerifyResult) bool {
 	cmd := exec.CommandContext(ctx, "opencode", "--version")
 	if err := cmd.Run(); err != nil {
 		result.Errors = append(result.Errors, fmt.Sprintf("opencode CLI not working: %v", err))
+		return false
+	}
+
+	return true
+}
+
+// verifyEngramWorks checks that engram CLI is installed and working.
+func verifyEngramWorks(result *VerifyResult) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "engram", "version")
+	if err := cmd.Run(); err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("engram CLI not working: %v", err))
 		return false
 	}
 

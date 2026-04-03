@@ -17,6 +17,9 @@ type Environment struct {
 	OpenCodeInstalled bool   // Whether opencode CLI is installed
 	OpenCodeVersion   string // Version of opencode if installed
 	OpenCodePath      string // Path to opencode binary
+	EngramInstalled   bool   // Whether engram CLI is installed
+	EngramVersion     string // Version of engram if installed
+	EngramPath        string // Path to engram binary
 	ConfigExists      bool   // Whether ~/.config/opencode/ exists
 	ConfigPath        string // Path to opencode config directory
 	ExistingConfig    string // "gentleman-dots", "hefesto", "custom", "none"
@@ -55,6 +58,15 @@ func Detect() (*Environment, error) {
 		version, err := getOpenCodeVersion(ctx)
 		if err == nil {
 			env.OpenCodeVersion = version
+		}
+	}
+
+	// Check if engram is installed
+	if p, err := exec.LookPath("engram"); err == nil {
+		env.EngramInstalled = true
+		env.EngramPath = p
+		if out, err := exec.Command("engram", "version").Output(); err == nil {
+			env.EngramVersion = strings.TrimSpace(string(out))
 		}
 	}
 

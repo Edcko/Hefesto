@@ -31,6 +31,20 @@ RUN ARCH=$(uname -m) && \
     chmod +x /usr/local/bin/opencode && \
     rm -rf /tmp/opencode.tar.gz
 
+# Install Engram v1.3.1 for persistent memory
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
+        ENGRAM_BINARY="engram_1.3.1_linux_arm64.tar.gz"; \
+    else \
+        ENGRAM_BINARY="engram_1.3.1_linux_amd64.tar.gz"; \
+    fi && \
+    curl -fsSL "https://github.com/Gentleman-Programming/engram/releases/download/v1.3.1/${ENGRAM_BINARY}" -o /tmp/engram.tar.gz && \
+    tar -xzf /tmp/engram.tar.gz -C /tmp && \
+    mv /tmp/engram /usr/local/bin/engram && \
+    chmod +x /usr/local/bin/engram && \
+    rm -rf /tmp/engram.tar.gz && \
+    echo "Engram installed: $(engram version)"
+
 # Copy Hefesto configuration to container
 COPY HefestoOpenCode/ /root/.config/opencode/
 

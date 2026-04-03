@@ -2,8 +2,10 @@
 package install
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"time"
 
 	embedpkg "github.com/Edcko/Hefesto/cmd/hefesto/internal/embed"
 )
@@ -15,6 +17,7 @@ const (
 	StepDetect Step = "detect"
 	StepBackup Step = "backup"
 	StepCopy   Step = "copy"
+	StepEngram Step = "engram"
 	StepNpm    Step = "npm"
 	StepVerify Step = "verify"
 )
@@ -129,7 +132,55 @@ func (i *Installer) Run() error {
 		Done:    true,
 	}
 
-	// Step 4: Run npm install
+	// Step 4: Install Engram if not present
+	i.Progress <- InstallProgress{
+		Step:    StepEngram,
+		Message: "Checking Engram installation...",
+		Done:    false,
+	}
+
+	if !i.dryRun {
+		if !i.env.EngramInstalled {
+			i.Progress <- InstallProgress{
+				Step:    StepEngram,
+				Message: "Installing Engram for persistent memory...",
+				Done:    false,
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+			defer cancel()
+
+			if err := InstallEngram(ctx); err != nil {
+				// Engram install failure is not fatal - config works without it
+				i.Progress <- InstallProgress{
+					Step:    StepEngram,
+					Message: fmt.Sprintf("Engram install failed (non-fatal): %v", err),
+					Done:    true,
+					// Don't set Error here - this is not a fatal error
+				}
+			} else {
+				i.Progress <- InstallProgress{
+					Step:    StepEngram,
+					Message: "Engram installed successfully",
+					Done:    true,
+				}
+			}
+		} else {
+			i.Progress <- InstallProgress{
+				Step:    StepEngram,
+				Message: fmt.Sprintf("Engram already installed: %s", i.env.EngramVersion),
+				Done:    true,
+			}
+		}
+	} else {
+		i.Progress <- InstallProgress{
+			Step:    StepEngram,
+			Message: "Engram install skipped (dry run)",
+			Done:    true,
+		}
+	}
+
+	// Step 5: Run npm install
 	i.Progress <- InstallProgress{
 		Step:    StepNpm,
 		Message: "Running npm install...",
@@ -160,7 +211,7 @@ func (i *Installer) Run() error {
 		}
 	}
 
-	// Step 5: Verify installation
+	// Step 6: Verify installation
 	i.Progress <- InstallProgress{
 		Step:    StepVerify,
 		Message: "Verifying installation...",
@@ -193,8 +244,8 @@ func (i *Installer) Run() error {
 
 		i.Progress <- InstallProgress{
 			Step: StepVerify,
-			Message: fmt.Sprintf("Verification complete (Config: %v, NPM: %v, OpenCode: %v)",
-				result.ConfigCopied, result.NpmInstalled, result.OpenCodeWorks),
+			Message: fmt.Sprintf("Verification complete (Config: %v, NPM: %v, OpenCode: %v, Engram: %v)",
+				result.ConfigCopied, result.NpmInstalled, result.OpenCodeWorks, result.EngramInstalled),
 			Done: true,
 		}
 	} else {
