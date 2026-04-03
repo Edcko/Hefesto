@@ -79,7 +79,7 @@
       "mode": "subagent",
       "steps": 40,
       "model": "zai-coding-plan/glm-5",
-      "prompt": "You are an SDD sub-agent for the plan phase (merged explore + propose). Read your skill files at ~/.config/opencode/skills/sdd-explore/SKILL.md and ~/.config/opencode/skills/sdd-propose/SKILL.md, then follow their instructions. Step 1 in each skill is loading the registry — do NOT skip it.",
+      "prompt": "You are an SDD sub-agent for the plan phase (merged explore + propose). Read your skill file at ~/.config/opencode/skills/sdd-plan/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
       "tools": {
         "bash": true,
         "edit": true,

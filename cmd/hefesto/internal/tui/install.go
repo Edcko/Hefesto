@@ -1,12 +1,18 @@
 package tui
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/Edcko/Hefesto/cmd/hefesto/internal/embed"
+	"github.com/Edcko/Hefesto/cmd/hefesto/internal/install"
 )
 
 // InstallStep represents a single installation step
@@ -50,6 +56,13 @@ type InstallModel struct {
 
 	// Progress tracking
 	startTime time.Time
+
+	// Real installer components
+	env       *install.Environment
+	installer *install.Installer
+
+	// Installation results for final report
+	verifyResult *install.VerifyResult
 }
 
 // StepCompleteMsg signals a step has completed
@@ -74,8 +87,8 @@ func NewInstallModel(configPath, backupPath string, existingConfig bool, width, 
 		steps: []InstallStep{
 			{Name: "Creating config directory", Status: StepPending},
 			{Name: "Copying Hefesto configuration", Status: StepPending},
-			{Name: "Installing dependencies", Status: StepPending},
-			{Name: "Configuring API provider", Status: StepPending},
+			{Name: "Installing Engram (persistent memory)", Status: StepPending},
+			{Name: "Installing npm dependencies", Status: StepPending},
 			{Name: "Verifying installation", Status: StepPending},
 		},
 		startTime: time.Now(),
@@ -93,16 +106,113 @@ func (m *InstallModel) Init() tea.Cmd {
 // runStep executes a single installation step
 func (m *InstallModel) runStep(index int) tea.Cmd {
 	return func() tea.Msg {
-		// This is a stub - the actual implementation will be in internal/install/
-		// For now, we simulate the steps with delays
-		time.Sleep(500 * time.Millisecond)
+		configPath := expandHomePath(m.configPath)
 
-		// Simulate success for now
-		// In real implementation, this would call installer functions
+		var err error
+		var message string
+
+		switch index {
+		case 0:
+			// Step 1: Create config directory
+			if err = os.MkdirAll(configPath, 0755); err != nil {
+				return StepCompleteMsg{
+					Index:   index,
+					Success: false,
+					Message: fmt.Sprintf("Failed to create directory: %v", err),
+					Error:   err,
+				}
+			}
+			message = "Created " + configPath
+
+		case 1:
+			// Step 2: Copy Hefesto configuration from embedded files
+			if err := install.CopyConfig(embed.ConfigFiles, configPath); err != nil {
+				return StepCompleteMsg{
+					Index:   index,
+					Success: false,
+					Message: fmt.Sprintf("Failed to copy configuration: %v", err),
+					Error:   err,
+				}
+			}
+			message = "Configuration copied successfully"
+
+		case 2:
+			// Step 3: Install dependencies (npm)
+			// npm install is non-fatal - continue even if it fails
+			if err := install.NpmInstall(configPath); err != nil {
+				// Log the warning but don't fail the install
+				message = fmt.Sprintf("npm install skipped: %v", err)
+			} else {
+				message = "Dependencies installed successfully"
+			}
+
+		case 3:
+			// Step 4: Configure API provider (Engram)
+			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+			defer cancel()
+
+			// Check if engram is already installed
+			env, detectErr := install.Detect()
+			if detectErr != nil {
+				return StepCompleteMsg{
+					Index:   index,
+					Success: false,
+					Message: fmt.Sprintf("Failed to detect environment: %v", detectErr),
+					Error:   detectErr,
+				}
+			}
+
+			if env.EngramInstalled {
+				message = fmt.Sprintf("Engram already installed (%s)", env.EngramVersion)
+			} else {
+				// Install engram
+				if err := install.InstallEngram(ctx); err != nil {
+					// Non-fatal - continue even if engram install fails
+					message = fmt.Sprintf("Engram install skipped: %v", err)
+				} else {
+					message = "Engram installed successfully"
+				}
+			}
+
+		case 4:
+			// Step 5: Verify installation
+			result, err := install.Verify(configPath)
+			if err != nil {
+				return StepCompleteMsg{
+					Index:   index,
+					Success: false,
+					Message: fmt.Sprintf("Verification failed: %v", err),
+					Error:   err,
+				}
+			}
+
+			// Check critical verifications
+			if !result.ConfigCopied {
+				err := fmt.Errorf("config files not properly installed")
+				return StepCompleteMsg{
+					Index:   index,
+					Success: false,
+					Message: "Configuration verification failed",
+					Error:   err,
+				}
+			}
+
+			message = fmt.Sprintf("Verified (Config: %v, NPM: %v, OpenCode: %v)",
+				result.ConfigCopied, result.NpmInstalled, result.OpenCodeWorks)
+
+		default:
+			return StepCompleteMsg{
+				Index:   index,
+				Success: false,
+				Message: fmt.Sprintf("Unknown step index: %d", index),
+				Error:   fmt.Errorf("unknown step index: %d", index),
+			}
+		}
+
 		return StepCompleteMsg{
 			Index:   index,
 			Success: true,
-			Message: "Completed",
+			Message: message,
 		}
 	}
 }
@@ -230,4 +340,16 @@ func (m *InstallModel) renderStep(index int, step InstallStep) string {
 	}
 
 	return CenterText(line, 60)
+}
+
+// expandHomePath expands ~ to the user's home directory
+func expandHomePath(path string) string {
+	if strings.HasPrefix(path, "~/") {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return path
+		}
+		return filepath.Join(homeDir, strings.TrimPrefix(path, "~/"))
+	}
+	return path
 }

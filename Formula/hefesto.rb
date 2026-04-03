@@ -13,22 +13,22 @@ class Hefesto < Formula
   on_macos do
     on_arm do
       url "https://github.com/Edcko/Hefesto/releases/download/v#{version}/hefesto-darwin-arm64"
-      sha256 "CHECKSUM_DARWIN_ARM64" # Updated automatically by CI/CD
+      sha256 "483883bcabefa2d9e11efd14f481dec88533b3118a6332148038aa9b824a0b27"
     end
     on_intel do
       url "https://github.com/Edcko/Hefesto/releases/download/v#{version}/hefesto-darwin-amd64"
-      sha256 "CHECKSUM_DARWIN_AMD64" # Updated automatically by CI/CD
+      sha256 "1cc8dff8b5359feb85d6430b8c80665b06a4326f96eac4c15657d370acd9a350"
     end
   end
 
   on_linux do
     on_arm do
       url "https://github.com/Edcko/Hefesto/releases/download/v#{version}/hefesto-linux-arm64"
-      sha256 "CHECKSUM_LINUX_ARM64" # Updated automatically by CI/CD
+      sha256 "a8718afdb32027ef9065eaf157b828705fda9fef8a0267e83d6240d2f10c1542"
     end
     on_intel do
       url "https://github.com/Edcko/Hefesto/releases/download/v#{version}/hefesto-linux-amd64"
-      sha256 "CHECKSUM_LINUX_AMD64" # Updated automatically by CI/CD
+      sha256 "b750fd0c908e34a6f117de9e665b3947623f8305bc2dad910ebec891bbb0bf7f"
     end
   end
 

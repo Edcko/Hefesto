@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Edcko/Hefesto/cmd/hefesto/internal/install"
 	"github.com/Edcko/Hefesto/cmd/hefesto/internal/tui"
 	"github.com/spf13/cobra"
 )
@@ -56,18 +57,52 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	if installDryRun {
 		fmt.Println("🔍 Dry run mode - no changes will be made")
 		fmt.Println()
-		// TODO: Show what would be installed
-		return nil
+		// Run the installer in dry-run mode
+		installer := install.NewInstaller(true)
+		return runInstallerWithProgress(installer)
 	}
 
 	if installYes {
 		fmt.Println("🚀 Non-interactive installation mode")
-		// TODO: Implement non-interactive installation
-		return nil
+		fmt.Println()
+		installer := install.NewInstaller(false)
+		return runInstallerWithProgress(installer)
 	}
 
 	// Launch interactive TUI
 	return tui.Run()
+}
+
+// runInstallerWithProgress runs the installer and prints progress to stdout.
+func runInstallerWithProgress(installer *install.Installer) error {
+	// Start installation in a goroutine
+	errChan := make(chan error, 1)
+	go func() {
+		errChan <- installer.Run()
+	}()
+
+	// Print progress updates
+	for progress := range installer.Progress {
+		if progress.Error != nil {
+			fmt.Printf("❌ [%s] %s\n", progress.Step, progress.Message)
+		} else if progress.Done {
+			fmt.Printf("✅ [%s] %s\n", progress.Step, progress.Message)
+		} else {
+			fmt.Printf("⏳ [%s] %s\n", progress.Step, progress.Message)
+		}
+	}
+
+	// Wait for completion
+	if err := <-errChan; err != nil {
+		fmt.Println()
+		fmt.Printf("❌ Installation failed: %v\n", err)
+		return err
+	}
+
+	fmt.Println()
+	fmt.Println("🎉 Hefesto configuration installed successfully!")
+	fmt.Println()
+	return nil
 }
 
 var uninstallCmd = &cobra.Command{
@@ -120,14 +155,12 @@ Shows:
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {
-	fmt.Println("📊 Hefesto Installation Status")
-	fmt.Println()
-	fmt.Printf("  Version:    %s\n", version)
-	fmt.Printf("  Commit:     %s\n", commit)
-	fmt.Printf("  Built:      %s\n", date)
-	fmt.Println()
-	// TODO: Check actual installation status
-	fmt.Println("  Status:     Not installed")
+	status, err := install.CheckStatus()
+	if err != nil {
+		return fmt.Errorf("failed to check status: %w", err)
+	}
+
+	install.PrintStatus(status)
 	return nil
 }
 

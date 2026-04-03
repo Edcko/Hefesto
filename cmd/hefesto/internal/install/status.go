@@ -1,0 +1,304 @@
+// Package install provides installation logic for Hefesto TUI installer.
+package install
+
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
+// StatusInfo holds detailed status information about the Hefesto installation.
+type StatusInfo struct {
+	ConfigPath string
+	Installed  bool
+	Version    string
+	Components ComponentStatus
+	Binaries   BinaryStatus
+}
+
+// ComponentStatus holds status of individual configuration components.
+type ComponentStatus struct {
+	AgentsMD     ComponentDetail
+	OpenCodeJSON ComponentDetail
+	Skills       ComponentDetail
+	Plugins      ComponentDetail
+	Personality  ComponentDetail
+	Theme        ComponentDetail
+	Commands     ComponentDetail
+}
+
+// ComponentDetail holds details about a specific component.
+type ComponentDetail struct {
+	Present bool
+	Detail  string // e.g., "8,624 bytes" or "27 directories"
+}
+
+// BinaryStatus holds status of required binaries.
+type BinaryStatus struct {
+	Engram   BinaryDetail
+	OpenCode BinaryDetail
+}
+
+// BinaryDetail holds details about a binary.
+type BinaryDetail struct {
+	Installed bool
+	Version   string
+	Path      string
+}
+
+// CheckStatus performs a comprehensive check of the Hefesto installation.
+func CheckStatus() (*StatusInfo, error) {
+	env, err := Detect()
+	if err != nil {
+		return nil, fmt.Errorf("failed to detect environment: %w", err)
+	}
+
+	status := &StatusInfo{
+		ConfigPath: env.ConfigPath,
+		Installed:  false, // Will be set properly after checking components
+	}
+
+	// If config exists, check components
+	if env.ConfigExists {
+		status.Components = checkComponents(env.ConfigPath)
+		status.Version = detectVersion(env.ConfigPath)
+
+		// Installed requires BOTH AGENTS.md AND opencode.json to exist
+		status.Installed = status.Components.AgentsMD.Present && status.Components.OpenCodeJSON.Present
+	}
+
+	// Check binaries
+	status.Binaries = BinaryStatus{
+		Engram: BinaryDetail{
+			Installed: env.EngramInstalled,
+			Version:   env.EngramVersion,
+			Path:      env.EngramPath,
+		},
+		OpenCode: BinaryDetail{
+			Installed: env.OpenCodeInstalled,
+			Version:   env.OpenCodeVersion,
+			Path:      env.OpenCodePath,
+		},
+	}
+
+	return status, nil
+}
+
+// checkComponents checks the status of all configuration components.
+func checkComponents(configPath string) ComponentStatus {
+	return ComponentStatus{
+		AgentsMD:     checkFile(configPath, "AGENTS.md"),
+		OpenCodeJSON: checkFile(configPath, "opencode.json"),
+		Skills:       checkDirectory(configPath, "skills"),
+		Plugins:      checkDirectory(configPath, "plugins"),
+		Personality:  checkFile(configPath, "personality"),
+		Theme:        checkThemeDirectory(configPath),
+		Commands:     checkDirectory(configPath, "commands"),
+	}
+}
+
+// checkFile checks if a file exists and returns its details.
+func checkFile(configPath, filename string) ComponentDetail {
+	filePath := filepath.Join(configPath, filename)
+	info, err := os.Stat(filePath)
+	if err != nil {
+		return ComponentDetail{Present: false, Detail: "Missing"}
+	}
+
+	size := formatBytes(info.Size())
+	return ComponentDetail{Present: true, Detail: size}
+}
+
+// checkDirectory checks if a directory exists and counts its contents.
+func checkDirectory(configPath, dirname string) ComponentDetail {
+	dirPath := filepath.Join(configPath, dirname)
+	info, err := os.Stat(dirPath)
+	if err != nil {
+		return ComponentDetail{Present: false, Detail: "Missing"}
+	}
+
+	if !info.IsDir() {
+		return ComponentDetail{Present: false, Detail: "Not a directory"}
+	}
+
+	// Count contents
+	contents, err := ioutil.ReadDir(dirPath)
+	if err != nil {
+		return ComponentDetail{Present: true, Detail: "Error reading"}
+	}
+
+	count := len(contents)
+	if dirname == "skills" {
+		// Count subdirectories for skills
+		dirCount := 0
+		for _, c := range contents {
+			if c.IsDir() {
+				dirCount++
+			}
+		}
+		return ComponentDetail{Present: true, Detail: fmt.Sprintf("%d directories", dirCount)}
+	}
+
+	return ComponentDetail{Present: true, Detail: fmt.Sprintf("%d files", count)}
+}
+
+// checkThemeDirectory checks if the themes directory exists and has at least one .json file.
+func checkThemeDirectory(configPath string) ComponentDetail {
+	themesPath := filepath.Join(configPath, "themes")
+	info, err := os.Stat(themesPath)
+	if err != nil {
+		return ComponentDetail{Present: false, Detail: "Missing"}
+	}
+
+	if !info.IsDir() {
+		return ComponentDetail{Present: false, Detail: "Not a directory"}
+	}
+
+	// Look for .json files in themes directory
+	contents, err := ioutil.ReadDir(themesPath)
+	if err != nil {
+		return ComponentDetail{Present: true, Detail: "Error reading"}
+	}
+
+	// Find the first .json file and report its details
+	for _, file := range contents {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".json") {
+			size := formatBytes(file.Size())
+			return ComponentDetail{
+				Present: true,
+				Detail:  fmt.Sprintf("%s (%s)", file.Name(), size),
+			}
+		}
+	}
+
+	// Themes directory exists but no .json files
+	return ComponentDetail{Present: false, Detail: "No .json files"}
+}
+
+// detectVersion tries to detect the Hefesto version from configuration files.
+func detectVersion(configPath string) string {
+	// Try to read version from AGENTS.md
+	agentsPath := filepath.Join(configPath, "AGENTS.md")
+	content, err := os.ReadFile(agentsPath)
+	if err == nil {
+		// Look for version markers in AGENTS.md
+		if strings.Contains(string(content), "Hefesto") {
+			return "Hefesto Config"
+		}
+		if strings.Contains(string(content), "Gentleman") {
+			return "Gentleman.Dots"
+		}
+	}
+
+	// Try opencode.json for version info
+	configFile := filepath.Join(configPath, "opencode.json")
+	content, err = os.ReadFile(configFile)
+	if err == nil {
+		// Simple check for version field
+		if strings.Contains(string(content), "version") {
+			// Could parse JSON properly, but for now just indicate it has version
+			return "Custom Config"
+		}
+	}
+
+	return "Unknown"
+}
+
+// formatBytes formats bytes into a human-readable string.
+func formatBytes(bytes int64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d bytes", bytes)
+	}
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
+}
+
+// PrintStatus prints the status information in a formatted way.
+func PrintStatus(status *StatusInfo) {
+	fmt.Println()
+	fmt.Println("🔥 Hefesto Status")
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println()
+
+	// Show config directory
+	fmt.Printf("  Config Dir:   %s\n", formatPath(status.ConfigPath))
+
+	if !status.Installed {
+		fmt.Println()
+		fmt.Println("  Status: ❌ Not installed")
+		fmt.Println()
+		fmt.Println("  Run `hefesto install` to get started.")
+		fmt.Println()
+		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		fmt.Println()
+		return
+	}
+
+	// Show installed status
+	fmt.Printf("  Installed:    ✅ Yes\n")
+	fmt.Printf("  Version:      %s\n", status.Version)
+	fmt.Println()
+
+	// Show components
+	fmt.Println("  Components:")
+	printComponent("AGENTS.md", status.Components.AgentsMD)
+	printComponent("opencode.json", status.Components.OpenCodeJSON)
+	printComponent("Skills", status.Components.Skills)
+	printComponent("Plugins", status.Components.Plugins)
+	printComponent("Personality", status.Components.Personality)
+	printComponent("Theme", status.Components.Theme)
+	printComponent("Commands", status.Components.Commands)
+	fmt.Println()
+
+	// Show binaries
+	fmt.Println("  Binaries:")
+	printBinary("engram", status.Binaries.Engram)
+	printBinary("opencode", status.Binaries.OpenCode)
+
+	fmt.Println()
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println()
+}
+
+// printComponent prints a component status line.
+func printComponent(name string, detail ComponentDetail) {
+	icon := "❌"
+	status := "Missing"
+	if detail.Present {
+		icon = "✅"
+		status = detail.Detail
+	}
+	fmt.Printf("    %-15s %s %s\n", name, icon, status)
+}
+
+// printBinary prints a binary status line.
+func printBinary(name string, detail BinaryDetail) {
+	if detail.Installed {
+		pathInfo := detail.Path
+		if detail.Version != "" {
+			pathInfo = fmt.Sprintf("%s (%s)", detail.Path, detail.Version)
+		}
+		fmt.Printf("    %-15s ✅ %s\n", name, pathInfo)
+	} else {
+		fmt.Printf("    %-15s ❌ Not installed\n", name)
+	}
+}
+
+// formatPath formats a path, replacing home directory with ~.
+func formatPath(path string) string {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return path
+	}
+	if strings.HasPrefix(path, homeDir) {
+		return "~" + strings.TrimPrefix(path, homeDir)
+	}
+	return path
+}

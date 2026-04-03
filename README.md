@@ -36,7 +36,7 @@ Hefesto es uno de los pilares del ecosistema Techne:
 ### 🔄 SDD Workflow Simplificado
 6 fases claras vs las 9 de Gentleman.Dots:
 ```
-init → explore → spec → tasks → apply → verify
+init → plan → spec → tasks → apply → verify
 ```
 
 ### 💾 Persistencia Simple
@@ -93,14 +93,11 @@ Hefesto/
     ├── commands/              # Comandos slash personalizados
     └── skills/                # Skills modulares
         ├── sdd-init/
-        ├── sdd-explore/
-        ├── sdd-propose/
+        ├── sdd-plan/           # merged: explore + propose
         ├── sdd-spec/
-        ├── sdd-design/
         ├── sdd-tasks/
         ├── sdd-apply/
-        ├── sdd-verify/
-        └── sdd-archive/
+        └── sdd-verify/
 ```
 
 ---
@@ -133,10 +130,10 @@ cp -r HefestoOpenCode ~/.config/opencode/
 # 1. Inicializar SDD en tu proyecto
 /sdd-init
 
-# 2. Explorar una idea antes de comprometerte
-/sdd-explore mi-feature
+# 2. Planear un cambio (explorar + proponer)
+/sdd-new mi-feature
 
-# 3. Crear propuesta de cambio
+# 3. O crear cambio completo
 /sdd-new agregar-autenticacion
 
 # 4. O ir rápido con todas las fases de planeación
@@ -153,12 +150,12 @@ cp -r HefestoOpenCode ~/.config/opencode/
 
 ```
 ┌─────────┐   ┌──────────┐   ┌────────┐   ┌────────┐   ┌────────┐   ┌────────┐
-│  INIT   │ → │ EXPLORE  │ → │  SPEC  │ → │ TASKS  │ → │ APPLY  │ → │ VERIFY │
+│  INIT   │ → │   PLAN   │ → │  SPEC  │ → │ TASKS  │ → │ APPLY  │ → │ VERIFY │
 └─────────┘   └──────────┘   └────────┘   └────────┘   └────────┘   └────────┘
      │              │              │            │            │            │
      ▼              ▼              ▼            ▼            ▼            ▼
   Contexto      Investigar    Requisitos   Checklist    Código      Validar
-  del stack     y clarificar  y escenarios  de tasks    real        specs
+  del stack     + Proponer    y escenarios  de tasks    real        specs
 ```
 
 ---
