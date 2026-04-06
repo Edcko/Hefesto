@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Edcko/Hefesto/cmd/hefesto/internal/install"
 	"github.com/Edcko/Hefesto/cmd/hefesto/internal/tui"
@@ -49,8 +50,14 @@ The installer will:
 }
 
 var (
-	installYes    bool
-	installDryRun bool
+	installYes     bool
+	installDryRun  bool
+	rollbackYes    bool
+	rollbackList   bool
+	uninstallYes   bool
+	uninstallPurge bool
+	updateYes      bool
+	updateDryRun   bool
 )
 
 func runInstall(cmd *cobra.Command, args []string) error {
@@ -110,16 +117,13 @@ var uninstallCmd = &cobra.Command{
 	Short: "Remove Hefesto configuration files",
 	Long: `Remove Hefesto configuration files from your system.
 
-If a backup exists, it will be restored. Otherwise, the
-configuration files will be removed.`,
+By default, the most recent backup will be restored.
+Use --purge to delete everything without restoring a backup.`,
 	RunE: runUninstall,
 }
 
 func runUninstall(cmd *cobra.Command, args []string) error {
-	fmt.Println("🗑️  Uninstalling Hefesto configuration...")
-	// TODO: Implement uninstall logic
-	fmt.Println("Uninstall not yet implemented")
-	return nil
+	return install.RunUninstall(uninstallPurge, uninstallYes)
 }
 
 var updateCmd = &cobra.Command{
@@ -135,10 +139,7 @@ This will:
 }
 
 func runUpdate(cmd *cobra.Command, args []string) error {
-	fmt.Println("🔄 Updating Hefesto configuration...")
-	// TODO: Implement update logic
-	fmt.Println("Update not yet implemented")
-	return nil
+	return install.RunUpdate(updateDryRun, updateYes)
 }
 
 var statusCmd = &cobra.Command{
@@ -164,6 +165,78 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+var rollbackCmd = &cobra.Command{
+	Use:   "rollback",
+	Short: "Restore a previous backup of OpenCode configuration",
+	Long: `Restore a previous backup of OpenCode configuration.
+
+This will:
+- List available backups
+- Allow you to select which backup to restore
+- Create a safety backup before restoring`,
+	RunE: runRollback,
+}
+
+func runRollback(cmd *cobra.Command, args []string) error {
+	backups, err := install.ListBackups()
+	if err != nil {
+		return fmt.Errorf("failed to list backups: %w", err)
+	}
+
+	// Just list backups
+	if rollbackList {
+		install.PrintBackups(backups)
+		return nil
+	}
+
+	// No backups found
+	if len(backups) == 0 {
+		install.PrintBackups(backups)
+		return nil
+	}
+
+	// Select backup to restore (most recent by default)
+	selectedBackup := install.PromptRollback(backups)
+	if selectedBackup == nil {
+		return fmt.Errorf("no backup selected")
+	}
+
+	// Non-interactive mode with --yes flag
+	if rollbackYes {
+		safetyBackup, err := install.Rollback(selectedBackup.Path)
+		if err != nil {
+			return fmt.Errorf("rollback failed: %w", err)
+		}
+		install.PrintRollbackResult(*selectedBackup, safetyBackup)
+		return nil
+	}
+
+	// Interactive mode - confirm before rollback
+	fmt.Println()
+	fmt.Println("🔥 Hefesto Rollback")
+	fmt.Println()
+	fmt.Printf("  Most recent backup: %s (%s)\n", selectedBackup.Name, install.FormatBackupDate(selectedBackup.Timestamp))
+	fmt.Println()
+	fmt.Print("  Restore this backup? [y/N]: ")
+
+	var response string
+	fmt.Scanln(&response)
+
+	if strings.ToLower(response) != "y" && strings.ToLower(response) != "yes" {
+		fmt.Println()
+		fmt.Println("  ❌ Rollback cancelled.")
+		fmt.Println()
+		return nil
+	}
+
+	safetyBackup, err := install.Rollback(selectedBackup.Path)
+	if err != nil {
+		return fmt.Errorf("rollback failed: %w", err)
+	}
+	install.PrintRollbackResult(*selectedBackup, safetyBackup)
+	return nil
+}
+
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",
@@ -180,10 +253,23 @@ func init() {
 	installCmd.Flags().BoolVarP(&installYes, "yes", "y", false, "non-interactive mode, accept all defaults")
 	installCmd.Flags().BoolVarP(&installDryRun, "dry-run", "d", false, "show what would happen without making changes")
 
+	// Rollback command flags
+	rollbackCmd.Flags().BoolVarP(&rollbackYes, "yes", "y", false, "Restore most recent backup without prompting")
+	rollbackCmd.Flags().BoolVar(&rollbackList, "list", false, "List available backups")
+
+	// Uninstall command flags
+	uninstallCmd.Flags().BoolVarP(&uninstallYes, "yes", "y", false, "Skip confirmation")
+	uninstallCmd.Flags().BoolVar(&uninstallPurge, "purge", false, "Delete everything without restoring backup")
+
+	// Update command flags
+	updateCmd.Flags().BoolVarP(&updateYes, "yes", "y", false, "Skip confirmation")
+	updateCmd.Flags().BoolVar(&updateDryRun, "dry-run", false, "Show what would change")
+
 	// Add commands to root
 	rootCmd.AddCommand(installCmd)
 	rootCmd.AddCommand(uninstallCmd)
 	rootCmd.AddCommand(updateCmd)
 	rootCmd.AddCommand(statusCmd)
+	rootCmd.AddCommand(rollbackCmd)
 	rootCmd.AddCommand(versionCmd)
 }
