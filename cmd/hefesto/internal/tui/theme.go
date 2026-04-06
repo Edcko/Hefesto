@@ -2,157 +2,235 @@
 package tui
 
 import (
+	"runtime/debug"
+	"strings"
+
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Fuego/Forge theme colors - the aesthetic of the forge
+// ===== Fuego/Forge Theme Colors =====
+// The aesthetic of the forge - fire, metal, and craftsmanship
+
 var (
-	// Primary - Amber/Orange tones for the forge fire
-	Primary     = lipgloss.Color("#FFA500") // Amber - titles, highlights
-	PrimaryDark = lipgloss.Color("#FF8C00") // Dark Orange - borders, accents
-	Secondary   = lipgloss.Color("#B87333") // Copper - borders, muted text
+	// ColorAmber - Primary for titles, success, highlights
+	ColorAmber = lipgloss.Color("#FF8C00")
+	// Primary - Alias for ColorAmber (backward compatibility)
+	Primary = ColorAmber
+	// PrimaryDark - Alias for ColorAmber (backward compatibility)
+	PrimaryDark = ColorAmber
+	// ColorCopper - Borders, subtitles, accents
+	ColorCopper = lipgloss.Color("#B87333")
+	// Secondary - Alias for ColorCopper (backward compatibility)
+	Secondary = ColorCopper
+	// ColorDeepBlack - Main background
+	ColorDeepBlack = lipgloss.Color("#1A1A1A")
+	// Background - Alias for ColorDeepBlack (backward compatibility)
+	Background = ColorDeepBlack
+	// ColorSurface - Cards, boxes (slightly lighter)
+	ColorSurface = lipgloss.Color("#2A2A2A")
+	// Surface - Alias for ColorSurface (backward compatibility)
+	Surface = ColorSurface
+	// ColorRed - Errors
+	ColorRed = lipgloss.Color("#FF4444")
+	// Error - Alias for ColorRed (backward compatibility)
+	Error = ColorRed
+	// ColorGray - Muted text
+	ColorGray = lipgloss.Color("#666666")
+	// ColorWhite - Normal text
+	ColorWhite = lipgloss.Color("#FFFFFF")
+	// ColorGreen - Success indicators
+	ColorGreen = lipgloss.Color("#22C55E")
+	// Success - Alias for ColorGreen (backward compatibility)
+	Success = ColorGreen
+	// ColorYellow - Warnings/pending
+	ColorYellow = lipgloss.Color("#EAB308")
+	// Warning - Alias for ColorYellow (backward compatibility)
+	Warning = ColorYellow
 
-	// Backgrounds - Dark forge atmosphere
-	Background = lipgloss.Color("#1A1A1A") // Main background
-	Surface    = lipgloss.Color("#2A2A2A") // Cards, boxes
-
-	// Semantic colors
-	Success = lipgloss.Color("#4CAF50") // Checkmarks, done
-	Error   = lipgloss.Color("#FF5252") // Errors, warnings
-	Warning = lipgloss.Color("#FFC107") // Warnings
-
-	// Text
-	Text      = lipgloss.Color("#E0E0E0") // Body text
-	TextMuted = lipgloss.Color("#888888") // Muted/disabled text
-	TextBold  = lipgloss.Color("#FFFFFF") // Bold text
+	// Text - Alias for ColorWhite (backward compatibility)
+	Text = ColorWhite
+	// TextMuted - Alias for ColorGray (backward compatibility)
+	TextMuted = ColorGray
+	// TextBold - Alias for ColorWhite (backward compatibility)
+	TextBold = ColorWhite
 )
 
-// Base styles
+// ===== Base Styles =====
+
 var (
-	// TitleStyle - Main titles in amber
+	// TitleStyle - Main titles in amber, bold
 	TitleStyle = lipgloss.NewStyle().
-			Foreground(Primary).
+			Foreground(ColorAmber).
 			Bold(true).
 			Padding(0, 1)
 
 	// SubtitleStyle - Subtitles with copper accent
 	SubtitleStyle = lipgloss.NewStyle().
-			Foreground(Secondary).
+			Foreground(ColorCopper).
 			Padding(0, 1)
 
-	// BodyStyle - Regular body text
+	// BodyStyle - Regular body text in white
 	BodyStyle = lipgloss.NewStyle().
-			Foreground(Text).
+			Foreground(ColorWhite).
 			Padding(0, 1)
 
 	// BoldStyle - Emphasized text
 	BoldStyle = lipgloss.NewStyle().
-			Foreground(TextBold).
+			Foreground(ColorWhite).
 			Bold(true)
 
-	// MutedStyle - Dimmed/disabled text
+	// MutedStyle - Dimmed/disabled text in gray
 	MutedStyle = lipgloss.NewStyle().
-			Foreground(TextMuted)
+			Foreground(ColorGray)
+
+	// HighlightStyle - Amber background, black text for emphasis
+	HighlightStyle = lipgloss.NewStyle().
+			Background(ColorAmber).
+			Foreground(ColorDeepBlack).
+			Bold(true).
+			Padding(0, 1)
 )
 
-// Box styles
+// ===== Semantic Styles =====
+
 var (
-	// BoxStyle - Card/box with border
+	// SuccessStyle - Green with checkmark for success states
+	SuccessStyle = lipgloss.NewStyle().
+			Foreground(ColorGreen).
+			Bold(true).
+			SetString("✅ ")
+
+	// ErrorStyle - Red with X for errors
+	ErrorStyle = lipgloss.NewStyle().
+			Foreground(ColorRed).
+			Bold(true).
+			SetString("❌ ")
+
+	// WarningStyle - Yellow for warnings
+	WarningStyle = lipgloss.NewStyle().
+			Foreground(ColorYellow).
+			Bold(true)
+
+	// InfoStyle - Amber for info
+	InfoStyle = lipgloss.NewStyle().
+			Foreground(ColorAmber)
+)
+
+// ===== Box Styles =====
+
+var (
+	// BorderStyle - Copper border for boxes
+	BorderStyle = lipgloss.NewStyle().
+			Border(lipgloss.DoubleBorder()).
+			BorderForeground(ColorCopper).
+			Background(ColorDeepBlack).
+			Padding(1, 2)
+
+	// BoxStyle - Card/box with rounded border
 	BoxStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(Secondary).
-			Background(Surface).
+			BorderForeground(ColorCopper).
+			Background(ColorSurface).
 			Padding(1, 2).
 			Margin(1, 2)
 
 	// BoxFocusedStyle - Focused box with amber border
 	BoxFocusedStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(Primary).
-			Background(Surface).
+			BorderForeground(ColorAmber).
+			Background(ColorSurface).
 			Padding(1, 2).
 			Margin(1, 2)
 )
 
-// Semantic styles
-var (
-	// SuccessStyle - Green for success states
-	SuccessStyle = lipgloss.NewStyle().
-			Foreground(Success).
-			Bold(true)
+// ===== Progress Bar Styles =====
 
-	// ErrorStyle - Red for errors
-	ErrorStyle = lipgloss.NewStyle().
-			Foreground(Error).
-			Bold(true)
-
-	// WarningStyle - Yellow for warnings
-	WarningStyle = lipgloss.NewStyle().
-			Foreground(Warning).
-			Bold(true)
-
-	// InfoStyle - Amber for info
-	InfoStyle = lipgloss.NewStyle().
-			Foreground(Primary)
-)
-
-// Progress bar styles
 var (
 	// ProgressContainerStyle - Container for progress bar
 	ProgressContainerStyle = lipgloss.NewStyle().
-				Foreground(TextMuted)
+				Foreground(ColorGray)
 
-	// ProgressFilledStyle - Filled portion of progress bar
+	// ProgressFilledStyle - Filled portion of progress bar in amber
 	ProgressFilledStyle = lipgloss.NewStyle().
-				Foreground(Primary).
+				Foreground(ColorAmber).
 				Bold(true)
 
 	// ProgressEmptyStyle - Empty portion of progress bar
 	ProgressEmptyStyle = lipgloss.NewStyle().
-				Foreground(TextMuted)
+				Foreground(ColorGray)
 )
 
-// Checkmark and status icons
+// ===== Status Icons =====
+
 const (
 	IconCheck   = "✓"
 	IconCross   = "✗"
 	IconSpinner = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 	IconArrow   = "→"
 	IconBullet  = "•"
+	IconFire    = "🔥"
 )
 
-// Logo - ASCII art anvil/forge symbol for Hefesto
-var Logo = `
-    ╔═══════════════════════════════════╗
-    ║                                   ║
-    ║     ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄      ║
-    ║    █░░░░░░░░░░░░░░░░░░░░░░░█     ║
-    ║    █░░░░░░░░░░░░░░░░░░░░░░░█     ║
-    ║    █░░░░░░░░░░░░░░░░░░░░░░░█     ║
-    ║    ████████▀▀▀▀▀▀▀▀████████      ║
-    ║    ░░░░░░░░        ░░░░░░░░      ║
-    ║   ░░░░░░░░░░      ░░░░░░░░░░     ║
-    ║  ░░░░░░░░░░░░    ░░░░░░░░░░░░    ║
-    ║ ░░░░░░░░░░░░░░  ░░░░░░░░░░░░░░   ║
-    ║                                   ║
-    ╚═══════════════════════════════════╝
-`
+// ===== ASCII Art Banner - The Anvil with Flames =====
 
-// LogoStyle returns the logo styled with amber gradient
-func LogoStyle() string {
+// BannerAnvil is the ASCII art anvil with flames
+const BannerAnvil = `
+    🔥
+   ╱│╲
+  ╱ │ ╲
+ ╱  │  ╲
+╱___▼___╲
+ ║███████║
+ ║███████║
+ ╰═══════╯`
+
+// Logo - Alias for BannerAnvil (backward compatibility)
+var Logo = BannerAnvil
+
+// BannerStyle returns the banner styled with amber
+func BannerStyle() string {
 	return lipgloss.NewStyle().
-		Foreground(Primary).
-		SetString(Logo).
+		Foreground(ColorAmber).
+		SetString(BannerAnvil).
 		String()
 }
 
-// Version display
-const Version = "v1.0.0"
+// ===== Version Handling =====
+
+// getVersion extracts version from build info or returns default
+func getVersion() string {
+	if info, ok := debug.ReadBuildInfo(); ok {
+		// Try to get version from Go module info
+		for _, setting := range info.Settings {
+			if setting.Key == "vcs.revision" {
+				if len(setting.Value) >= 7 {
+					return "v0.1.0-" + setting.Value[:7]
+				}
+			}
+		}
+	}
+	return "v0.1.0"
+}
+
+// Version holds the current Hefesto version
+var Version = getVersion()
 
 // VersionStyle returns styled version string
 func VersionStyle() string {
-	return MutedStyle.Render("Hefesto " + Version)
+	return lipgloss.NewStyle().
+		Foreground(ColorAmber).
+		Bold(true).
+		Render("HEFESTO " + Version)
 }
+
+// TaglineStyle returns styled tagline
+func TaglineStyle() string {
+	return lipgloss.NewStyle().
+		Foreground(ColorCopper).
+		Render("AI Dev Environment Forge")
+}
+
+// ===== Utility Functions =====
 
 // CenterText centers text within a given width
 func CenterText(text string, width int) string {
@@ -160,6 +238,16 @@ func CenterText(text string, width int) string {
 		Width(width).
 		Align(lipgloss.Center).
 		Render(text)
+}
+
+// CenterBlock centers a block of text within a given width
+func CenterBlock(text string, width int) string {
+	lines := strings.Split(text, "\n")
+	var result []string
+	for _, line := range lines {
+		result = append(result, CenterText(line, width))
+	}
+	return strings.Join(result, "\n")
 }
 
 // ProgressBar renders a progress bar
@@ -184,4 +272,40 @@ func repeatStr(s string, n int) string {
 		result += s
 	}
 	return result
+}
+
+// BulletItem creates a bullet point item with amber bullet
+func BulletItem(text string) string {
+	bullet := lipgloss.NewStyle().Foreground(ColorAmber).Render(IconBullet)
+	return "  " + bullet + "  " + text
+}
+
+// AmberText renders text in amber color
+func AmberText(text string) string {
+	return lipgloss.NewStyle().Foreground(ColorAmber).Render(text)
+}
+
+// CopperText renders text in copper color
+func CopperText(text string) string {
+	return lipgloss.NewStyle().Foreground(ColorCopper).Render(text)
+}
+
+// WhiteText renders text in white color
+func WhiteText(text string) string {
+	return lipgloss.NewStyle().Foreground(ColorWhite).Render(text)
+}
+
+// GrayText renders text in gray color
+func GrayText(text string) string {
+	return lipgloss.NewStyle().Foreground(ColorGray).Render(text)
+}
+
+// GreenText renders text in green color
+func GreenText(text string) string {
+	return lipgloss.NewStyle().Foreground(ColorGreen).Render(text)
+}
+
+// RedText renders text in red color
+func RedText(text string) string {
+	return lipgloss.NewStyle().Foreground(ColorRed).Render(text)
 }
