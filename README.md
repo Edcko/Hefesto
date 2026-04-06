@@ -1,184 +1,343 @@
-# 🔥 Hefesto
+```
+    🔥
+   ╱│╲
+  ╱ │ ╲
+ ╱  │  ╲        HEFESTO
+╱___▼___╲       AI Dev Environment Forge
+ ║███████║
+ ║███████║       Forge your perfect AI dev environment
+ ╰═══════╯
+```
 
-**El Forge del Ecosistema Techne**
-
-> Configuración y forjado del entorno de desarrollo con IA — simplificado, potente, sin excusas.
-
----
-
-## ¿Qué es Hefesto?
-
-Hefesto es un sistema de configuración para entornos de desarrollo asistidos por IA. Proporciona un workflow **Spec-Driven Development (SDD)** simplificado, un agente mentor integrado, y persistencia de memoria跨-sesiones.
-
-A diferencia de otras soluciones sobre-ingenierizadas, Hefesto se enfoca en lo esencial:
-- **Menos configuración, más código real**
-- **Persistencia simple sin mode branching**
-- **Agente que enseña, no que solo ejecuta**
+[![Go Version](https://img.shields.io/badge/Go-1.26.1-00ADD8?style=flat&logo=go)](https://golang.org/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/Edcko/Hefesto?include_prereleases)](https://github.com/Edcko/Hefesto/releases)
 
 ---
 
-## Parte del Ecosistema Techne
+## What is Hefesto?
 
-Hefesto es uno de los pilares del ecosistema Techne:
+Hefesto is an opinionated installer and configuration manager for OpenCode. It deploys a complete AI development environment with agents, skills, SDD workflow, persistent memory, and more — in one command.
 
-| Proyecto | Rol |
-|----------|-----|
-| **Techne** | La matriz/fundación del ecosistema |
-| **Apolo** | Agente IA para servidores VPS |
-| **Artemisa** | Agente IA para servidores VPS |
-| **Hefesto** | El forge — configura y forja el entorno de desarrollo |
-| **Mneme** | Fork de Engram (memoria persistente, próximamente) |
+No complex setup. No manual file copying. Just install and start building with AI assistance that actually understands your workflow.
 
 ---
 
-## Características Principales
+## Features
 
-### 🔄 SDD Workflow Simplificado
-6 fases claras vs las 9 de Gentleman.Dots:
+- **7 CLI Commands**: `install`, `status`, `update`, `uninstall`, `rollback`, `doctor`, `version`
+- **26 AI Skills**: Angular, React, Next.js, TypeScript, Tailwind, Zod, Django, .NET, Playwright, Pytest, and more
+- **6-Phase SDD Workflow**: `init → plan → spec → tasks → apply → verify`
+- **10 Agents**: Primary mentor, orchestrator, SDD phases, and remote execution
+- **Persistent Memory**: Via Engram integration for cross-session context
+- **Background Agents Plugin**: Parallel task execution without blocking
+- **Interactive TUI Installer**: Progress tracking with Bubbletea
+- **Homebrew Distribution**: `brew install edcko/tap/hefesto`
+- **Multi-Platform**: darwin/linux × arm64/amd64 binaries
+- **Fuego/Forge Theme**: Cohesive visual identity with amber/copper palette
+
+---
+
+## Quick Start
+
+```bash
+# Install via Homebrew (macOS/Linux)
+brew install edcko/tap/hefesto
+
+# Or download binary from GitHub Releases
+# https://github.com/Edcko/Hefesto/releases
+
+# Install Hefesto configuration
+hefesto install
+
+# Check installation health
+hefesto doctor
+
+# Start using OpenCode
+opencode
+```
+
+---
+
+## CLI Commands
+
+| Command | Description | Flags |
+|--------|-------------|-------|
+| `hefesto install` | Install Hefesto configuration files | `--yes`, `--dry-run` |
+| `hefesto status` | Show installation status | `--verbose` |
+| `hefesto doctor` | Run comprehensive health diagnostics | — |
+| `hefesto update` | Update to latest configuration | `--yes`, `--dry-run` |
+| `hefesto uninstall` | Remove Hefesto configuration | `--yes`, `--purge` |
+| `hefesto rollback` | Restore a previous backup | `--yes`, `--list` |
+| `hefesto version` | Print version information | — |
+
+### Command Details
+
+**`hefesto install`**
+- Detects OpenCode configuration directory (`~/.config/opencode/`)
+- Creates timestamped backups of existing configs
+- Deploys embedded configuration files
+- Sets up skills, themes, plugins, and commands
+- Flags: `--yes` (non-interactive), `--dry-run` (preview changes)
+
+**`hefesto doctor`**
+Runs comprehensive checks on:
+- Configuration directory structure
+- AGENTS.md file validity
+- opencode.json configuration
+- Skills directory and structure
+- Plugins directory (engram, background-agents)
+- Theme configuration
+- Personality settings
+- Custom commands
+
+**`hefesto rollback`**
+- Lists available backups with timestamps
+- Creates safety backup before restoring
+- Flags: `--list` (show backups), `--yes` (restore most recent without prompt)
+
+**`hefesto status`**
+- Shows installation directory
+- Displays installed version
+- Lists available skills count
+- Reports configuration health
+- Flag: `--verbose` for detailed output
+
+---
+
+## What Gets Installed
+
+Hefesto deploys the following into `~/.config/opencode/`:
+
+```
+~/.config/opencode/
+├── AGENTS.md              # Hefesto persona + SDD orchestrator + Engram protocol
+├── opencode.json          # 10 agent definitions with step limits
+├── skills/                # 26 skill directories
+│   ├── _shared/           # Phase-common patterns, persistence conventions
+│   ├── ai-sdk-5/          # Vercel AI SDK 5 patterns
+│   ├── angular/           # Angular 20+ architecture
+│   ├── django-drf/        # Django REST Framework
+│   ├── dotnet/            # .NET 9 / ASP.NET Core
+│   ├── go-testing/        # Go + Bubbletea TUI testing
+│   ├── nextjs-15/         # Next.js 15 App Router
+│   ├── playwright/        # E2E testing with Playwright
+│   ├── pr-review/         # GitHub PR review workflow
+│   ├── pytest/            # Python testing patterns
+│   ├── react-19/          # React 19 with Compiler
+│   ├── remote-exec/       # SSH/VPS remote execution
+│   ├── sdd-*/             # SDD phase skills (init, plan, spec, tasks, apply, verify)
+│   ├── skill-creator/     # AI agent skill creation
+│   ├── skill-registry/    # Project skill registry management
+│   ├── stream-deck/       # Presentation slide decks
+│   ├── tailwind-4/        # Tailwind CSS 4 patterns
+│   ├── technical-review/  # Code assessment workflow
+│   ├── typescript/        # TypeScript strict patterns
+│   ├── zod-4/             # Zod 4 schema validation
+│   └── zustand-5/         # Zustand 5 state management
+├── plugins/
+│   ├── engram.ts          # Persistent memory integration
+│   └── background-agents.ts  # Parallel agent execution
+├── commands/              # 5 SDD slash commands
+│   ├── sdd-init.md
+│   ├── sdd-new.md
+│   ├── sdd-ff.md
+│   ├── sdd-apply.md
+│   └── sdd-verify.md
+├── themes/
+│   └── hefesto.json       # Fuego/Forge theme (amber/copper)
+└── personality/
+    └── hefesto.md         # Hefesto persona definition
+```
+
+---
+
+## Skills (26 Total)
+
+### SDD Workflow
+- **sdd-init** — Bootstrap SDD context and project configuration
+- **sdd-plan** — Explore codebase and create change proposals (merged explore + propose)
+- **sdd-spec** — Write detailed specifications from proposals
+- **sdd-tasks** — Break down specs and designs into implementation tasks
+- **sdd-apply** — Implement code changes from task definitions
+- **sdd-verify** — Validate implementation against specs
+
+### Frontend Frameworks
+- **angular** — Angular 20+ architecture with Scope Rule, Screaming Architecture, standalone components, signals
+- **react-19** — React 19 patterns with React Compiler (no useMemo/useCallback needed)
+- **nextjs-15** — Next.js 15 App Router patterns (routing, Server Actions, data fetching)
+- **tailwind-4** — Tailwind CSS 4 patterns and best practices (cn(), theme variables)
+- **typescript** — TypeScript strict patterns and best practices (types, interfaces, generics)
+- **zustand-5** — Zustand 5 state management patterns
+
+### Backend Frameworks
+- **django-drf** — Django REST Framework patterns (ViewSets, Serializers, Filters)
+- **dotnet** — .NET 9 / ASP.NET Core with Minimal APIs, Clean Architecture, EF Core
+
+### Testing
+- **playwright** — Playwright E2E testing patterns (Page Objects, selectors, MCP workflow)
+- **pytest** — Pytest testing patterns for Python (fixtures, mocking, markers)
+- **go-testing** — Go tests and Bubbletea TUI testing
+
+### AI & SDK
+- **ai-sdk-5** — Vercel AI SDK 5 patterns (breaking changes from v4)
+- **zod-4** — Zod 4 schema validation patterns (breaking changes from v3)
+
+### Workflow & Review
+- **pr-review** — Review GitHub PRs and Issues with structured analysis
+- **technical-review** — Review technical exercises and candidate submissions
+- **skill-creator** — Create new AI agent skills following Agent Skills spec
+- **skill-registry** — Create or update project skill registry
+- **stream-deck** — Create slide-deck presentation webs for streams and courses
+
+### DevOps
+- **remote-exec** — Execute commands on remote servers via SSH
+
+### Shared
+- **_shared** — Phase-common patterns, persistence conventions
+
+---
+
+## SDD Workflow
+
+Spec-Driven Development is the structured planning layer for substantial changes.
+
+### 6 Phases
+
 ```
 init → plan → spec → tasks → apply → verify
 ```
 
-### 💾 Persistencia Simple
-- **Un solo modo**: Engram (memoria persistente)
-- Sin `openspec`, sin `hybrid`, sin `none`
-- Sin branching de configuración por modo
+- **init** — Bootstrap SDD context and detect project stack
+- **plan** — Explore codebase + create change proposal (merged explore + propose)
+- **spec** — Write detailed requirements and scenarios
+- **tasks** — Break down specs into implementation checklist
+- **apply** — Implement code changes from task definitions
+- **verify** — Validate implementation matches specs
 
-### 🤖 Agente Hefesto
-- Personalidad mentor — enseña fundamentos, no shortcuts
-- Helpful-first pero sin tolerar mediocridad
-- Responde en el idioma del usuario
+### Slash Commands
 
-### 🌐 Remote-Exec de Primera Clase
-- SSH/VPS como ciudadanos de primera
-- Sin bloqueos por operaciones remotas
-- Delegación clara al sub-agente `remote-exec`
+| Command | Action |
+|---------|--------|
+| `/sdd-init` | Bootstrap SDD in your project |
+| `/sdd-new <change>` | Create new change (runs plan phase) |
+| `/sdd-ff <change>` | Fast-forward: plan → spec → tasks |
+| `/sdd-apply <change>` | Implement tasks |
+| `/sdd-verify <change>` | Validate implementation |
 
-### 🔥 Tema Fuego/Forge
-- Identidad visual coherente
-- Emojis y metáforas de herrería/fuego
+### Persistence
 
-### 📦 Skill System Extensible
-- Sistema modular de skills
-- Registry por proyecto
-- Fácil adición de nuevas capacidades
+**Engram only.** No mode selection. Artifacts are stored in persistent memory and survive sessions and compactions.
 
 ---
 
-## Comparación con Gentleman.Dots
+## Architecture
 
-| Aspecto | Gentleman.Dots | Hefesto |
-|---------|----------------|---------|
-| Fases SDD | 9 | 6 |
-| Modos persistencia | 4 (engram, openspec, hybrid, none) | 1 (engram) |
-| Config branching | Sí (por modo) | No |
-| SSH handling | Bloquea main loop | Delegación async |
-| Skills incluidas | 18+ | Esencial (creciendo) |
-| Complejidad config | ~100% | ~62% |
+### Installer
+- **Language**: Go 1.26.1
+- **TUI Framework**: Bubbletea (Charmbracelet)
+- **CLI Framework**: Cobra
+- **Embedding**: Configuration files embedded in binary via `go:embed`
+
+### Distribution
+- **Homebrew Tap**: `edcko/tap/hefesto`
+- **GitHub Releases**: 4 platform binaries (darwin/linux × arm64/amd64)
+- **Installation Size**: ~15MB (includes all configs, skills, themes)
+
+### Configuration
+- **Target Directory**: `~/.config/opencode/`
+- **Backup Strategy**: Timestamped backups before each operation
+- **Rollback Support**: Full backup restoration with safety backup
 
 ---
 
-## Estructura del Proyecto
+## Development
+
+```bash
+# Clone the repository
+git clone https://github.com/Edcko/Hefesto.git
+cd Hefesto
+
+# Build the binary
+cd cmd/hefesto
+go build .
+
+# Run locally
+./hefesto install --dry-run
+
+# Test in Docker (multi-platform)
+cd ../..
+./scripts/test.sh
+
+# Run unit tests
+cd cmd/hefesto
+go test ./...
+```
+
+### Project Structure
 
 ```
 Hefesto/
 ├── README.md
 ├── LICENSE
 ├── .gitignore
-├── docs/
-│   └── SDD.md                 # Documentación del workflow
-└── HefestoOpenCode/
-    ├── AGENTS.md              # Personalidad y reglas del agente
-    ├── GEMINI.md              # Instrucciones específicas de Gemini
-    ├── commands/              # Comandos slash personalizados
-    └── skills/                # Skills modulares
-        ├── sdd-init/
-        ├── sdd-plan/           # merged: explore + propose
-        ├── sdd-spec/
-        ├── sdd-tasks/
-        ├── sdd-apply/
-        └── sdd-verify/
+├── HefestoOpenCode/           # Configuration to be deployed
+│   ├── AGENTS.md
+│   ├── opencode.json
+│   ├── skills/
+│   ├── plugins/
+│   ├── commands/
+│   ├── themes/
+│   └── personality/
+├── cmd/hefesto/               # Installer binary
+│   ├── main.go                # CLI entry point
+│   ├── internal/
+│   │   ├── install/           # Installation logic
+│   │   ├── tui/               # Bubbletea TUI
+│   │   └── embed/config/      # Embedded configs (via go:embed)
+│   └── go.mod
+└── scripts/
+    └── test.sh                # Docker test runner
 ```
 
 ---
 
-## Instalación
+## Techne Ecosystem
 
-### Próximamente
-- Instalador TUI interactivo
-- Homebrew formula (`brew install hefesto`)
+Hefesto is part of the Techne ecosystem:
 
-### Instalación Manual
-
-```bash
-# Clonar el repositorio
-git clone https://github.com/Edcko/Hefesto.git
-cd Hefesto
-
-# Copiar configuración a OpenCode
-cp -r HefestoOpenCode ~/.config/opencode/
-
-# Verificar instalación
-# Reinicia tu sesión de OpenCode/Gemini CLI
-```
+| Project | Role |
+|---------|------|
+| **Techne** | The foundation/matrix of the ecosystem |
+| **Hefesto** | The forge — configures and deploys AI dev environments |
+| **Engram** | Persistent memory for AI agents (integrated) |
+| **OpenCode** | The AI coding assistant platform |
 
 ---
 
-## Quick Start: SDD Workflow
+## Contributing
 
-```bash
-# 1. Inicializar SDD en tu proyecto
-/sdd-init
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/my-improvement`
+3. Make your changes following conventional commits
+4. Commit: `git commit -m "feat: clear description"`
+5. Push: `git push origin feature/my-improvement`
+6. Open a Pull Request
 
-# 2. Planear un cambio (explorar + proponer)
-/sdd-new mi-feature
-
-# 3. O crear cambio completo
-/sdd-new agregar-autenticacion
-
-# 4. O ir rápido con todas las fases de planeación
-/sdd-ff agregar-autenticacion
-
-# 5. Implementar
-/sdd-apply agregar-autenticacion
-
-# 6. Verificar
-/sdd-verify agregar-autenticacion
-```
-
-### Diagrama de Fases
-
-```
-┌─────────┐   ┌──────────┐   ┌────────┐   ┌────────┐   ┌────────┐   ┌────────┐
-│  INIT   │ → │   PLAN   │ → │  SPEC  │ → │ TASKS  │ → │ APPLY  │ → │ VERIFY │
-└─────────┘   └──────────┘   └────────┘   └────────┘   └────────┘   └────────┘
-     │              │              │            │            │            │
-     ▼              ▼              ▼            ▼            ▼            ▼
-  Contexto      Investigar    Requisitos   Checklist    Código      Validar
-  del stack     + Proponer    y escenarios  de tasks    real        specs
-```
+**Guidelines:**
+- Use conventional commits (`feat:`, `fix:`, `docs:`, `refactor:`)
+- NO AI attribution in commits (no "Co-Authored-By" lines)
+- Clean code over quick code
+- Test your changes with `hefesto install --dry-run`
 
 ---
 
-## Contribuir
-
-1. Fork el repositorio
-2. Crea una rama: `git checkout -b feature/mi-mejora`
-3. Commit: `git commit -m "feat: descripción clara"`
-4. Push: `git push origin feature/mi-mejora`
-5. Abre un Pull Request
-
-**Reglas de oro:**
-- Commits convencionales (`feat:`, `fix:`, `docs:`, `refactor:`)
-- Sin atribución de IA en commits
-- Código limpio sobre código rápido
-
----
-
-## Licencia
+## License
 
 MIT License © 2026 Edcko
 
+See [LICENSE](LICENSE) for full text.
+
 ---
 
-> 🔥 *"El buen herrero no culpa a su martillo. Forja con lo que tiene."*
+> 🔥 *"A good blacksmith doesn't blame their hammer. They forge with what they have."*

@@ -1,5 +1,6 @@
 {
   "$schema": "https://opencode.ai/theme.json",
+  "name": "Hefesto Fuego/Forge",
   "theme": {
     "name": "Hefesto",
     "description": "Forge theme - warm amber and copper on deep black",

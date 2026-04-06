@@ -91,7 +91,7 @@ func (m *WelcomeModel) View() string {
 
 	// Bullet points with amber bullets
 	items := []string{
-		"26 AI skills (Angular, React, SDD...)",
+		"25 AI skills (Angular, React, SDD...)",
 		"SDD orchestrator + 6 phase agents",
 		"Fuego/Forge theme (amber/copper)",
 		"Engram persistent memory",

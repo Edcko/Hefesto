@@ -325,8 +325,8 @@ func checkSkills() CheckResult {
 
 	result.Details = append(result.Details, fmt.Sprintf("%d skills found", skillCount))
 
-	// Expected skill count (26 based on the embed)
-	expectedCount := 26
+	// Expected skill count (25 based on the embed, excluding _shared which is not a skill)
+	expectedCount := 25
 	if skillCount < expectedCount {
 		result.Warnings = append(result.Warnings, fmt.Sprintf("Expected %d skills, found %d", expectedCount, skillCount))
 	}
@@ -417,7 +417,13 @@ func checkEngram() CheckResult {
 		return result
 	}
 
-	version := strings.TrimSpace(string(output))
+	versionOutput := strings.TrimSpace(string(output))
+
+	// Extract just the semver part (e.g., "engram 1.3.1" -> "1.3.1")
+	version := versionOutput
+	if idx := strings.LastIndex(versionOutput, " "); idx != -1 {
+		version = versionOutput[idx+1:]
+	}
 
 	// Parse version and check minimum
 	minVersion := "1.3.1"

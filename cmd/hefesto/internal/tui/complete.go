@@ -42,7 +42,7 @@ func NewCompleteModel(configPath string, width, height int) *CompleteModel {
 		configPath: configPath,
 		InstalledComponents: []InstalledComponent{
 			{Name: "Config files", Description: "(AGENTS.md, opencode.json)"},
-			{Name: "26 AI skills", Description: "(Angular, React, SDD...)"},
+			{Name: "25 AI skills", Description: "(Angular, React, SDD...)"},
 			{Name: "6 SDD phase agents", Description: "(init→plan→spec→...)"},
 			{Name: "Fuego/Forge theme", Description: "(amber/copper)"},
 			{Name: "Engram", Description: "(persistent memory)"},
