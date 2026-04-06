@@ -58,6 +58,7 @@ var (
 	uninstallPurge bool
 	updateYes      bool
 	updateDryRun   bool
+	statusVerbose  bool
 )
 
 func runInstall(cmd *cobra.Command, args []string) error {
@@ -160,8 +161,37 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to check status: %w", err)
 	}
+	if statusVerbose {
+		install.PrintStatusVerbose(status)
+	} else {
+		install.PrintStatus(status)
+	}
+	return nil
+}
 
-	install.PrintStatus(status)
+var doctorCmd = &cobra.Command{
+	Use:   "doctor",
+	Short: "Run diagnostic checks on Hefesto installation",
+	Long: `Run comprehensive diagnostic checks on your Hefesto installation.
+
+Checks:
+- Configuration directory structure
+- AGENTS.md file validity
+- opencode.json configuration
+- Skills directory and structure
+- Plugins directory
+- Engram binary and configuration
+- OpenCode binary
+- Theme configuration
+- Personality settings
+- Custom commands`,
+	RunE: runDoctor,
+}
+
+func runDoctor(cmd *cobra.Command, args []string) error {
+	result, exitCode := install.RunDoctor()
+	install.PrintDoctor(result)
+	os.Exit(exitCode)
 	return nil
 }
 
@@ -265,11 +295,15 @@ func init() {
 	updateCmd.Flags().BoolVarP(&updateYes, "yes", "y", false, "Skip confirmation")
 	updateCmd.Flags().BoolVar(&updateDryRun, "dry-run", false, "Show what would change")
 
+	// Status command flags
+	statusCmd.Flags().BoolVarP(&statusVerbose, "verbose", "v", false, "Show detailed status information")
+
 	// Add commands to root
 	rootCmd.AddCommand(installCmd)
 	rootCmd.AddCommand(uninstallCmd)
 	rootCmd.AddCommand(updateCmd)
 	rootCmd.AddCommand(statusCmd)
+	rootCmd.AddCommand(doctorCmd)
 	rootCmd.AddCommand(rollbackCmd)
 	rootCmd.AddCommand(versionCmd)
 }

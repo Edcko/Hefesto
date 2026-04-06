@@ -267,6 +267,79 @@ func PrintStatus(status *StatusInfo) {
 	fmt.Println()
 }
 
+// PrintStatusVerbose prints detailed status information.
+func PrintStatusVerbose(status *StatusInfo) {
+	fmt.Println()
+	fmt.Println("🔥 Hefesto Status (Verbose)")
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println()
+
+	// Show config directory
+	fmt.Printf("  Config Directory: %s\n", formatPath(status.ConfigPath))
+	fmt.Println()
+
+	if !status.Installed {
+		fmt.Println("  Installation Status: ❌ Not installed")
+		fmt.Println()
+		fmt.Println("  Run `hefesto install` to get started.")
+		fmt.Println()
+		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		fmt.Println()
+		return
+	}
+
+	// Show installed status
+	fmt.Println("  Installation Status: ✅ Installed")
+	fmt.Printf("  Version:             %s\n", status.Version)
+	fmt.Println()
+
+	// Show components with full details
+	fmt.Println("  ┌─ Components ─────────────────────────")
+	printComponentVerbose("AGENTS.md", status.Components.AgentsMD)
+	printComponentVerbose("opencode.json", status.Components.OpenCodeJSON)
+	printComponentVerbose("Skills", status.Components.Skills)
+	printComponentVerbose("Plugins", status.Components.Plugins)
+	printComponentVerbose("Personality", status.Components.Personality)
+	printComponentVerbose("Theme", status.Components.Theme)
+	printComponentVerbose("Commands", status.Components.Commands)
+	fmt.Println("  └───────────────────────────────────────")
+	fmt.Println()
+
+	// Show binaries with full details
+	fmt.Println("  ┌─ Binaries ────────────────────────────")
+	printBinaryVerbose("engram", status.Binaries.Engram)
+	printBinaryVerbose("opencode", status.Binaries.OpenCode)
+	fmt.Println("  └───────────────────────────────────────")
+
+	fmt.Println()
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println()
+}
+
+// printComponentVerbose prints a component status with verbose formatting.
+func printComponentVerbose(name string, detail ComponentDetail) {
+	icon := "❌"
+	status := "Missing"
+	if detail.Present {
+		icon = "✅"
+		status = detail.Detail
+	}
+	fmt.Printf("  │ %-15s %s %s\n", name, icon, status)
+}
+
+// printBinaryVerbose prints a binary status with verbose formatting.
+func printBinaryVerbose(name string, detail BinaryDetail) {
+	if detail.Installed {
+		pathInfo := detail.Path
+		if detail.Version != "" {
+			pathInfo = fmt.Sprintf("%s (%s)", detail.Path, detail.Version)
+		}
+		fmt.Printf("  │ %-15s ✅ %s\n", name, pathInfo)
+	} else {
+		fmt.Printf("  │ %-15s ❌ Not installed\n", name)
+	}
+}
+
 // printComponent prints a component status line.
 func printComponent(name string, detail ComponentDetail) {
 	icon := "❌"
