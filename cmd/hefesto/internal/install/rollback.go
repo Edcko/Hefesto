@@ -25,7 +25,13 @@ func ListBackups() ([]BackupInfo, error) {
 	}
 
 	configDir := filepath.Join(homeDir, ".config")
-	pattern := filepath.Join(configDir, "opencode-backup-*")
+	return ListBackupsInDir(configDir)
+}
+
+// ListBackupsInDir finds all backup directories in the specified directory.
+// This is a testable version of ListBackups.
+func ListBackupsInDir(dir string) ([]BackupInfo, error) {
+	pattern := filepath.Join(dir, "opencode-backup-*")
 
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
@@ -60,9 +66,20 @@ func ListBackups() ([]BackupInfo, error) {
 	return backups, nil
 }
 
-// parseBackupTimestamp extracts the timestamp from a backup directory name.
+// FindMostRecentBackup returns the most recent backup from the list.
+// Returns an error if no backups are available.
+func FindMostRecentBackup(backups []BackupInfo) (*BackupInfo, error) {
+	if len(backups) == 0 {
+		return nil, fmt.Errorf("no backups available")
+	}
+
+	// Backups are already sorted newest-first by ListBackups
+	return &backups[0], nil
+}
+
+// ParseBackupTimestamp extracts the timestamp from a backup directory name.
 // Expected format: opencode-backup-YYYYMMDD-HHMMSS
-func parseBackupTimestamp(name string) (time.Time, error) {
+func ParseBackupTimestamp(name string) (time.Time, error) {
 	prefix := "opencode-backup-"
 	if !strings.HasPrefix(name, prefix) {
 		return time.Time{}, fmt.Errorf("invalid backup name format: %s", name)
@@ -76,6 +93,9 @@ func parseBackupTimestamp(name string) (time.Time, error) {
 
 	return t, nil
 }
+
+// parseBackupTimestamp is an alias for ParseBackupTimestamp for backward compatibility.
+var parseBackupTimestamp = ParseBackupTimestamp
 
 // Rollback restores a backup to the opencode config directory.
 // It creates a safety backup of the current config before restoring.
