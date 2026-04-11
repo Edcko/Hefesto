@@ -2,11 +2,14 @@
 package install
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"time"
+
+	"github.com/Edcko/Hefesto/cmd/hefesto/internal/logger"
 )
 
 // NpmInstall runs npm install in the config directory.
@@ -28,19 +31,26 @@ func NpmInstall(configPath string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	// Run npm install
+	// Run npm install — capture output so it doesn't clutter hefesto's output.
+	// Only print on failure for debugging.
+	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, "npm", "install")
 	cmd.Dir = configPath
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
 		// Check if it was a timeout
 		if ctx.Err() == context.DeadlineExceeded {
 			return fmt.Errorf("npm install timed out after 60 seconds")
 		}
+		// Print captured output so the user can debug the failure
+		if stderr.Len() > 0 {
+			fmt.Fprintln(os.Stderr, stderr.String())
+		}
 		return fmt.Errorf("npm install failed: %w", err)
 	}
 
+	logger.Debug("npm install completed: %s", stdout.String())
 	return nil
 }

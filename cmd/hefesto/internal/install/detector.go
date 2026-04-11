@@ -26,6 +26,12 @@ func getUserHomeDir() (string, error) {
 	return os.UserHomeDir()
 }
 
+// DetectHomeDir is the exported version of getUserHomeDir for use by commands
+// in the main package.
+func DetectHomeDir() (string, error) {
+	return getUserHomeDir()
+}
+
 // Environment holds information about the current system environment.
 type Environment struct {
 	OpenCodeInstalled bool   // Whether opencode CLI is installed

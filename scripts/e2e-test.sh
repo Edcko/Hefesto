@@ -37,9 +37,13 @@ echo "🔥 Hefesto E2E Test Suite"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
+# Resolve paths based on script location
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
 # Build and deploy latest binary
 echo "📦 Building and deploying latest binary..."
-cd /Users/misael/Hefesto/cmd/hefesto && GOOS=linux GOARCH=amd64 go build -o /tmp/hefesto-e2e . || { echo "❌ Build failed"; exit 1; }
+cd "$PROJECT_DIR/cmd/hefesto" && GOOS=linux GOARCH=amd64 go build -o /tmp/hefesto-e2e . || { echo "❌ Build failed"; exit 1; }
 docker cp /tmp/hefesto-e2e hefesto-test:/usr/local/bin/hefesto || { echo "❌ Docker copy failed"; exit 1; }
 docker exec hefesto-test chmod +x /usr/local/bin/hefesto
 echo -e "${GREEN}✅ Binary deployed${NC}"

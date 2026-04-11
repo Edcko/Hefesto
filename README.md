@@ -25,7 +25,7 @@ No complex setup. No manual file copying. Just install and start building with A
 
 ## Features
 
-- **7 CLI Commands**: `install`, `status`, `update`, `uninstall`, `rollback`, `doctor`, `version`
+- **10 CLI Commands**: `install`, `status`, `update`, `uninstall`, `rollback`, `doctor`, `config`, `list`, `version`, `completion`
 - **26 AI Skills**: Angular, React, Next.js, TypeScript, Tailwind, Zod, Django, .NET, Playwright, Pytest, and more
 - **6-Phase SDD Workflow**: `init → plan → spec → tasks → apply → verify`
 - **10 Agents**: Primary mentor, orchestrator, SDD phases, and remote execution
@@ -69,6 +69,11 @@ opencode
 | `hefesto update` | Update to latest configuration (not the binary) | `--yes`, `--dry-run` |
 | `hefesto uninstall` | Remove Hefesto configuration | `--yes`, `--purge` |
 | `hefesto rollback` | Restore a previous backup | `--yes`, `--list` |
+| `hefesto config show` | Display current config paths and settings | — |
+| `hefesto config path` | Print config directory path | — |
+| `hefesto list skills` | List all embedded skills | `--json` |
+| `hefesto list themes` | List available themes | `--json` |
+| `hefesto list backups` | List timestamped backups | `--json` |
 | `hefesto version` | Print version information | — |
 
 ### Command Details
@@ -109,6 +114,24 @@ Runs comprehensive checks on:
 - Lists available skills count
 - Reports configuration health
 - Flag: `--verbose` for detailed output
+
+---
+
+## Shell Completion
+
+Hefesto supports shell completion for bash, zsh, fish, and PowerShell:
+
+```bash
+# Bash
+hefesto completion bash > ~/.config/hefesto/completion.bash
+source ~/.config/hefesto/completion.bash
+
+# Zsh
+hefesto completion zsh > "${fpath[1]}/_hefesto"
+
+# Fish
+hefesto completion fish > ~/.config/fish/completions/hefesto.fish
+```
 
 ---
 

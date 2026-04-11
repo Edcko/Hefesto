@@ -4,6 +4,7 @@ package install
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -215,15 +216,21 @@ func (u *Uninstaller) executeRestore(backups []BackupInfo) error {
 		Done:    false,
 	}
 
-	// Remove current config first
-	if err := os.RemoveAll(u.configPath); err != nil {
+	// Remove current config first (with progress when non-interactive)
+	var removeErr error
+	if u.skipConfirm {
+		removeErr = removeAllWithProgress(u.configPath)
+	} else {
+		removeErr = os.RemoveAll(u.configPath)
+	}
+	if removeErr != nil {
 		u.Progress <- UninstallProgress{
 			Step:    "restore",
-			Message: fmt.Sprintf("Failed to remove current config: %v", err),
+			Message: fmt.Sprintf("Failed to remove current config: %v", removeErr),
 			Done:    true,
-			Error:   err,
+			Error:   removeErr,
 		}
-		return fmt.Errorf("failed to remove current config: %w", err)
+		return fmt.Errorf("failed to remove current config: %w", removeErr)
 	}
 
 	// Copy backup to config location
@@ -265,14 +272,20 @@ func (u *Uninstaller) executePurge() error {
 		Done:    false,
 	}
 
-	if err := os.RemoveAll(u.configPath); err != nil {
+	var removeErr error
+	if u.skipConfirm {
+		removeErr = removeAllWithProgress(u.configPath)
+	} else {
+		removeErr = os.RemoveAll(u.configPath)
+	}
+	if removeErr != nil {
 		u.Progress <- UninstallProgress{
 			Step:    "remove",
-			Message: fmt.Sprintf("Failed to remove configuration: %v", err),
+			Message: fmt.Sprintf("Failed to remove configuration: %v", removeErr),
 			Done:    true,
-			Error:   err,
+			Error:   removeErr,
 		}
-		return fmt.Errorf("failed to remove configuration: %w", err)
+		return fmt.Errorf("failed to remove configuration: %w", removeErr)
 	}
 
 	u.Progress <- UninstallProgress{
@@ -293,14 +306,20 @@ func (u *Uninstaller) removeConfig() error {
 		Done:    false,
 	}
 
-	if err := os.RemoveAll(u.configPath); err != nil {
+	var removeErr error
+	if u.skipConfirm {
+		removeErr = removeAllWithProgress(u.configPath)
+	} else {
+		removeErr = os.RemoveAll(u.configPath)
+	}
+	if removeErr != nil {
 		u.Progress <- UninstallProgress{
 			Step:    "remove",
-			Message: fmt.Sprintf("Failed to remove configuration: %v", err),
+			Message: fmt.Sprintf("Failed to remove configuration: %v", removeErr),
 			Done:    true,
-			Error:   err,
+			Error:   removeErr,
 		}
-		return fmt.Errorf("failed to remove configuration: %w", err)
+		return fmt.Errorf("failed to remove configuration: %w", removeErr)
 	}
 
 	u.Progress <- UninstallProgress{
@@ -396,6 +415,62 @@ func countFiles(path string) int {
 		}
 	}
 	return count
+}
+
+// removeAllWithProgress removes a directory tree while printing file-count
+// progress to stderr. This keeps the user informed during --yes uninstalls
+// without interfering with TUI or JSON output.
+func removeAllWithProgress(path string) error {
+	// Count entries for progress estimation
+	var total int
+	_ = filepath.WalkDir(path, func(_ string, _ fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		total++
+		return nil
+	})
+
+	if total == 0 {
+		return os.RemoveAll(path)
+	}
+
+	fmt.Fprintf(os.Stderr, "  🗑️  Removing %d items...\n", total)
+
+	// Collect files and directories for ordered deletion
+	var files []string
+	var dirs []string
+	_ = filepath.WalkDir(path, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			dirs = append(dirs, p)
+		} else {
+			files = append(files, p)
+		}
+		return nil
+	})
+
+	// Delete files with progress
+	var removed int
+	for _, f := range files {
+		removed++
+		if removed%100 == 0 {
+			pct := removed * 100 / total
+			fmt.Fprintf(os.Stderr, "  🗑️  Progress: %d/%d (%d%%)\n", removed, total, pct)
+		}
+		_ = os.Remove(f)
+	}
+
+	// Delete directories deepest-first (reverse order from WalkDir)
+	for i := len(dirs) - 1; i >= 0; i-- {
+		removed++
+		_ = os.Remove(dirs[i])
+	}
+
+	fmt.Fprintf(os.Stderr, "  ✅ Removed %d items\n", total)
+	return nil
 }
 
 // RunUninstall is a convenience function that creates and runs an uninstaller.

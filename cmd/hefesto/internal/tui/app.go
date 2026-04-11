@@ -104,12 +104,11 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case "ctrl+c":
+			a.quitting = true
+			return a, tea.Quit
+		case "q":
 			if a.screen == ScreenComplete || a.screen == ScreenError {
-				a.quitting = true
-				return a, tea.Quit
-			}
-			if a.screen == ScreenWelcome {
 				a.quitting = true
 				return a, tea.Quit
 			}
