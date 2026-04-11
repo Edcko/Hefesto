@@ -8,6 +8,8 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/Edcko/Hefesto/cmd/hefesto/internal/install"
 )
 
 // BackupModel is the backup confirmation and execution screen
@@ -97,58 +99,13 @@ func (m *BackupModel) runBackup() tea.Cmd {
 			src := filepath.Join(configPath, item)
 			dst := filepath.Join(backupPath, item)
 
-			if err := copyPath(src, dst); err != nil {
+			if err := install.CopyPath(src, dst); err != nil {
 				return BackupCompleteMsg{Error: err.Error()}
 			}
 		}
 
 		return BackupCompleteMsg{Path: m.backupPath}
 	}
-}
-
-// copyPath copies a file or directory
-func copyPath(src, dst string) error {
-	info, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-
-	if info.IsDir() {
-		return copyDir(src, dst)
-	}
-	return copyFile(src, dst)
-}
-
-// copyDir copies a directory recursively
-func copyDir(src, dst string) error {
-	if err := os.MkdirAll(dst, 0755); err != nil {
-		return err
-	}
-
-	entries, err := os.ReadDir(src)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		srcPath := filepath.Join(src, entry.Name())
-		dstPath := filepath.Join(dst, entry.Name())
-
-		if err := copyPath(srcPath, dstPath); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// copyFile copies a single file
-func copyFile(src, dst string) error {
-	data, err := os.ReadFile(src)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(dst, data, 0644)
 }
 
 // Update implements tea.Model

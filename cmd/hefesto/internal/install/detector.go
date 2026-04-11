@@ -12,6 +12,18 @@ import (
 	"time"
 )
 
+// getUserHomeDir returns the user's home directory, prioritizing the $HOME
+// environment variable. This is necessary because os.UserHomeDir() on macOS
+// does not respect $HOME when changed via t.Setenv() in tests.
+func getUserHomeDir() (string, error) {
+	// First check $HOME environment variable (respects t.Setenv in tests)
+	if homeDir := os.Getenv("HOME"); homeDir != "" {
+		return homeDir, nil
+	}
+	// Fallback to os.UserHomeDir() for systems where $HOME is not set
+	return os.UserHomeDir()
+}
+
 // Environment holds information about the current system environment.
 type Environment struct {
 	OpenCodeInstalled bool   // Whether opencode CLI is installed
@@ -39,7 +51,7 @@ func Detect() (*Environment, error) {
 	env.IsAppleSilicon = env.Platform == "darwin" && env.Arch == "arm64"
 
 	// Get config path using home directory
-	homeDir, err := os.UserHomeDir()
+	homeDir, err := getUserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user home directory: %w", err)
 	}
@@ -70,10 +82,20 @@ func Detect() (*Environment, error) {
 		}
 	}
 
-	// Check if config directory exists
+	// Check if config directory exists AND has actual config files.
+	// We can't rely on directory existence alone because `opencode --version`
+	// (called above in getOpenCodeVersion) auto-creates the directory as a
+	// side-effect. Only treat as "existing" if AGENTS.md or opencode.json
+	// are present — those indicate a real installation.
 	if _, err := os.Stat(env.ConfigPath); err == nil {
-		env.ConfigExists = true
-		env.ExistingConfig = detectExistingConfig(env.ConfigPath)
+		agentsExists := fileExists(filepath.Join(env.ConfigPath, "AGENTS.md"))
+		jsonExists := fileExists(filepath.Join(env.ConfigPath, "opencode.json"))
+		if agentsExists || jsonExists {
+			env.ConfigExists = true
+			env.ExistingConfig = detectExistingConfig(env.ConfigPath)
+		} else {
+			env.ExistingConfig = "none"
+		}
 	} else {
 		env.ExistingConfig = "none"
 	}
@@ -102,6 +124,15 @@ func getOpenCodeVersion(ctx context.Context) (string, error) {
 	}
 
 	return version, nil
+}
+
+// fileExists returns true if the file at path exists and is not a directory.
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return !info.IsDir()
 }
 
 // detectExistingConfig analyzes the existing config to determine its type.

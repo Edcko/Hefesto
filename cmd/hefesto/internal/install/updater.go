@@ -421,7 +421,7 @@ func (u *Updater) Run() error {
 
 // formatBackupPath shortens the backup path for display.
 func formatBackupPath(path string) string {
-	homeDir, _ := os.UserHomeDir()
+	homeDir, _ := getUserHomeDir()
 	if homeDir != "" && strings.HasPrefix(path, homeDir) {
 		return "~" + strings.TrimPrefix(path, homeDir)
 	}

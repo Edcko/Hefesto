@@ -7,6 +7,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	installPkg "github.com/Edcko/Hefesto/cmd/hefesto/internal/install"
 )
 
 // Screen represents the current screen in the TUI
@@ -68,6 +70,11 @@ type App struct {
 
 	// Error state
 	lastError *InstallError
+
+	// Partial install tracking for error screen
+	completedSteps []string
+	pendingSteps   []string
+	failedStep     string
 
 	// Quit channel
 	quitting bool
@@ -148,14 +155,45 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a.handleScreenTransition(msg)
 
 	case ErrorMsg:
+		// Snapshot install step tracking before transitioning to error screen
+		a.UpdateInstallStepTracking()
+
 		a.lastError = &InstallError{
 			Step:    msg.Step,
 			Message: msg.Message,
 			Err:     msg.Err,
 		}
 		a.err = NewErrorModel(a.lastError)
+
+		// Pass partial install step info from the install model
+		a.err.SetSteps(a.completedSteps, a.pendingSteps, a.failedStep)
+
+		// Wire up action callbacks
+		a.err.OnAction = func(action ErrorAction) tea.Cmd {
+			switch action {
+			case ErrorActionRetry:
+				// Reset install state and go back to install screen
+				a.completedSteps = nil
+				a.pendingSteps = nil
+				a.failedStep = ""
+				return TransitionTo(ScreenInstall)
+
+			case ErrorActionUndo:
+				// Perform rollback/uninstall of partial install, then quit
+				return a.performUndo()
+
+			case ErrorActionQuit:
+				a.quitting = true
+				return tea.Quit
+			}
+			return tea.Quit
+		}
+
 		a.screen = ScreenError
 		return a, a.err.Init()
+
+	case UndoCompleteMsg:
+		return a.handleUndoComplete()
 	}
 
 	// Update current screen
@@ -327,6 +365,9 @@ type ErrorMsg struct {
 	Err     error
 }
 
+// UndoCompleteMsg signals that the undo/rollback operation has completed
+type UndoCompleteMsg struct{}
+
 // NewErrorMsg creates an error message
 func NewErrorMsg(step, message string, err error) tea.Cmd {
 	return func() tea.Msg {
@@ -344,6 +385,61 @@ func Tick(d time.Duration) tea.Cmd {
 	return tea.Tick(d, func(t time.Time) tea.Msg {
 		return TickMsg(t)
 	})
+}
+
+// performUndo rolls back a partial installation and returns a quit command
+func (a *App) performUndo() tea.Cmd {
+	return func() tea.Msg {
+		configPath := expandHomePath(a.configPath)
+
+		// Try to restore from backup if one was made
+		if a.backupPath != "" {
+			backupPath := expandHomePath(a.backupPath)
+			if _, err := os.Stat(backupPath); err == nil {
+				// Remove partial install
+				_ = os.RemoveAll(configPath)
+				// Restore backup using the install package's CopyDirectory
+				_ = installPkg.CopyDirectory(backupPath, configPath)
+			}
+		} else {
+			// No backup — just remove the partial config
+			_ = os.RemoveAll(configPath)
+		}
+
+		return UndoCompleteMsg{}
+	}
+}
+
+// handleUndoComplete transitions to quit after undo finishes
+func (a *App) handleUndoComplete() (tea.Model, tea.Cmd) {
+	a.quitting = true
+	return a, tea.Quit
+}
+
+// UpdateInstallStepTracking records completed/pending/failed steps from the install model
+func (a *App) UpdateInstallStepTracking() {
+	if a.install == nil {
+		return
+	}
+
+	var completed []string
+	var pending []string
+	var failed string
+
+	for _, step := range a.install.steps {
+		switch step.Status {
+		case StepComplete:
+			completed = append(completed, step.Name)
+		case StepPending:
+			pending = append(pending, step.Name)
+		case StepError:
+			failed = step.Name
+		}
+	}
+
+	a.completedSteps = completed
+	a.pendingSteps = pending
+	a.failedStep = failed
 }
 
 // Run starts the TUI application

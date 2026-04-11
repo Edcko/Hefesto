@@ -41,7 +41,7 @@ func (u *Uninstaller) Run() error {
 	defer close(u.Progress)
 
 	// Get home directory
-	homeDir, err := os.UserHomeDir()
+	homeDir, err := getUserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to get user home directory: %w", err)
 	}
@@ -224,7 +224,7 @@ func (u *Uninstaller) executeRestore(backups []BackupInfo) error {
 	}
 
 	// Copy backup to config location
-	if err := copyDirectory(backup.Path, u.configPath); err != nil {
+	if err := CopyDirectory(backup.Path, u.configPath); err != nil {
 		u.Progress <- UninstallProgress{
 			Step:    "restore",
 			Message: fmt.Sprintf("Failed to restore backup: %v", err),

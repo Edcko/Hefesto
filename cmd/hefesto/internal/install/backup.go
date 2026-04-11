@@ -18,7 +18,7 @@ func Backup(configPath string) (string, error) {
 	}
 
 	// Get home directory for backup location
-	homeDir, err := os.UserHomeDir()
+	homeDir, err := getUserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to get user home directory: %w", err)
 	}
@@ -34,7 +34,7 @@ func Backup(configPath string) (string, error) {
 	}
 
 	// Copy the entire config directory
-	err = copyDirectory(configPath, backupPath)
+	err = CopyDirectory(configPath, backupPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to copy config to backup: %w", err)
 	}
@@ -42,8 +42,9 @@ func Backup(configPath string) (string, error) {
 	return backupPath, nil
 }
 
-// copyDirectory recursively copies a directory and all its contents.
-func copyDirectory(src, dst string) error {
+// CopyDirectory recursively copies a directory and all its contents.
+// It skips node_modules directories.
+func CopyDirectory(src, dst string) error {
 	// Get source directory info
 	info, err := os.Stat(src)
 	if err != nil {
@@ -71,12 +72,12 @@ func copyDirectory(src, dst string) error {
 				continue
 			}
 			// Recursively copy subdirectory
-			if err := copyDirectory(srcPath, dstPath); err != nil {
+			if err := CopyDirectory(srcPath, dstPath); err != nil {
 				return err
 			}
 		} else {
 			// Copy file
-			if err := copyFile(srcPath, dstPath); err != nil {
+			if err := CopyFile(srcPath, dstPath); err != nil {
 				return err
 			}
 		}
@@ -85,8 +86,8 @@ func copyDirectory(src, dst string) error {
 	return nil
 }
 
-// copyFile copies a single file from src to dst.
-func copyFile(src, dst string) error {
+// CopyFile copies a single file from src to dst.
+func CopyFile(src, dst string) error {
 	// Open source file
 	sourceFile, err := os.Open(src)
 	if err != nil {
@@ -114,4 +115,18 @@ func copyFile(src, dst string) error {
 	}
 
 	return nil
+}
+
+// CopyPath copies a file or directory from src to dst.
+// If src is a directory, it copies recursively (skipping node_modules).
+// If src is a file, it copies the file preserving permissions.
+func CopyPath(src, dst string) error {
+	info, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	if info.IsDir() {
+		return CopyDirectory(src, dst)
+	}
+	return CopyFile(src, dst)
 }

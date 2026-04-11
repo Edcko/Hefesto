@@ -3,7 +3,6 @@ package install
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -124,7 +123,7 @@ func checkDirectory(configPath, dirname string) ComponentDetail {
 	}
 
 	// Count contents
-	contents, err := ioutil.ReadDir(dirPath)
+	contents, err := os.ReadDir(dirPath)
 	if err != nil {
 		return ComponentDetail{Present: true, Detail: "Error reading"}
 	}
@@ -157,18 +156,22 @@ func checkThemeDirectory(configPath string) ComponentDetail {
 	}
 
 	// Look for .json files in themes directory
-	contents, err := ioutil.ReadDir(themesPath)
+	contents, err := os.ReadDir(themesPath)
 	if err != nil {
 		return ComponentDetail{Present: true, Detail: "Error reading"}
 	}
 
 	// Find the first .json file and report its details
-	for _, file := range contents {
-		if !file.IsDir() && strings.HasSuffix(file.Name(), ".json") {
-			size := formatBytes(file.Size())
+	for _, entry := range contents {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".json") {
+			info, err := entry.Info()
+			if err != nil {
+				continue
+			}
+			size := formatBytes(info.Size())
 			return ComponentDetail{
 				Present: true,
-				Detail:  fmt.Sprintf("%s (%s)", file.Name(), size),
+				Detail:  fmt.Sprintf("%s (%s)", entry.Name(), size),
 			}
 		}
 	}
@@ -366,7 +369,7 @@ func printBinary(name string, detail BinaryDetail) {
 
 // formatPath formats a path, replacing home directory with ~.
 func formatPath(path string) string {
-	homeDir, err := os.UserHomeDir()
+	homeDir, err := getUserHomeDir()
 	if err != nil {
 		return path
 	}

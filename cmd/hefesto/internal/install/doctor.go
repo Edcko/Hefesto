@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -99,7 +98,7 @@ func RunDoctor() (*DoctorResult, int) {
 func checkConfigDir() CheckResult {
 	result := CheckResult{Passed: true}
 
-	homeDir, err := os.UserHomeDir()
+	homeDir, err := getUserHomeDir()
 	if err != nil {
 		result.Passed = false
 		result.Errors = append(result.Errors, "Cannot determine home directory")
@@ -152,7 +151,7 @@ func checkConfigDir() CheckResult {
 func checkAgentsMD() CheckResult {
 	result := CheckResult{Passed: true}
 
-	homeDir, _ := os.UserHomeDir()
+	homeDir, _ := getUserHomeDir()
 	agentsPath := filepath.Join(homeDir, ".config", "opencode", "AGENTS.md")
 
 	// Check if file exists
@@ -203,7 +202,7 @@ func checkAgentsMD() CheckResult {
 func checkOpenCodeJSON() CheckResult {
 	result := CheckResult{Passed: true}
 
-	homeDir, _ := os.UserHomeDir()
+	homeDir, _ := getUserHomeDir()
 	configPath := filepath.Join(homeDir, ".config", "opencode", "opencode.json")
 
 	// Check if file exists
@@ -278,7 +277,7 @@ func checkOpenCodeJSON() CheckResult {
 func checkSkills() CheckResult {
 	result := CheckResult{Passed: true}
 
-	homeDir, _ := os.UserHomeDir()
+	homeDir, _ := getUserHomeDir()
 	skillsPath := filepath.Join(homeDir, ".config", "opencode", "skills")
 
 	// Check if directory exists
@@ -296,7 +295,7 @@ func checkSkills() CheckResult {
 	}
 
 	// Count skill directories with SKILL.md
-	contents, err := ioutil.ReadDir(skillsPath)
+	contents, err := os.ReadDir(skillsPath)
 	if err != nil {
 		result.Passed = false
 		result.Errors = append(result.Errors, "Cannot read skills directory")
@@ -344,7 +343,7 @@ func checkSkills() CheckResult {
 func checkPlugins() CheckResult {
 	result := CheckResult{Passed: true}
 
-	homeDir, _ := os.UserHomeDir()
+	homeDir, _ := getUserHomeDir()
 	configPath := filepath.Join(homeDir, ".config", "opencode")
 	pluginsPath := filepath.Join(configPath, "plugins")
 
@@ -482,7 +481,7 @@ func checkOpenCode() CheckResult {
 func checkTheme() CheckResult {
 	result := CheckResult{Passed: true}
 
-	homeDir, _ := os.UserHomeDir()
+	homeDir, _ := getUserHomeDir()
 	themesPath := filepath.Join(homeDir, ".config", "opencode", "themes")
 
 	// Check if themes directory exists
@@ -498,7 +497,7 @@ func checkTheme() CheckResult {
 	}
 
 	// Find JSON files
-	contents, err := ioutil.ReadDir(themesPath)
+	contents, err := os.ReadDir(themesPath)
 	if err != nil {
 		result.Warnings = append(result.Warnings, "Cannot read themes directory")
 		return result
@@ -546,7 +545,7 @@ func checkTheme() CheckResult {
 func checkPersonality() CheckResult {
 	result := CheckResult{Passed: true}
 
-	homeDir, _ := os.UserHomeDir()
+	homeDir, _ := getUserHomeDir()
 	personalityPath := filepath.Join(homeDir, ".config", "opencode", "personality")
 
 	// Check if personality directory exists
@@ -580,7 +579,7 @@ func checkPersonality() CheckResult {
 func checkCommands() CheckResult {
 	result := CheckResult{Passed: true}
 
-	homeDir, _ := os.UserHomeDir()
+	homeDir, _ := getUserHomeDir()
 	commandsPath := filepath.Join(homeDir, ".config", "opencode", "commands")
 
 	// Check if commands directory exists
@@ -596,7 +595,7 @@ func checkCommands() CheckResult {
 	}
 
 	// Count .md files
-	contents, err := ioutil.ReadDir(commandsPath)
+	contents, err := os.ReadDir(commandsPath)
 	if err != nil {
 		result.Warnings = append(result.Warnings, "Cannot read commands directory")
 		return result

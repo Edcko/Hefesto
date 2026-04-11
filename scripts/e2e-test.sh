@@ -39,7 +39,7 @@ echo ""
 
 # Build and deploy latest binary
 echo "📦 Building and deploying latest binary..."
-cd /Users/misael/Hefesto/cmd/hefeto && GOOS=linux GOARCH=amd64 go build -o /tmp/hefesto-e2e . || { echo "❌ Build failed"; exit 1; }
+cd /Users/misael/Hefesto/cmd/hefesto && GOOS=linux GOARCH=amd64 go build -o /tmp/hefesto-e2e . || { echo "❌ Build failed"; exit 1; }
 docker cp /tmp/hefesto-e2e hefesto-test:/usr/local/bin/hefesto || { echo "❌ Docker copy failed"; exit 1; }
 docker exec hefesto-test chmod +x /usr/local/bin/hefesto
 echo -e "${GREEN}✅ Binary deployed${NC}"

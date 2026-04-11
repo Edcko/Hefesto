@@ -2,14 +2,14 @@ package tui
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
 	"runtime"
 	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/Edcko/Hefesto/cmd/hefesto/internal/install"
 )
 
 // DetectModel is the environment detection screen
@@ -65,106 +65,64 @@ func (m *DetectModel) Init() tea.Cmd {
 }
 
 // runDetection performs the actual environment detection
+// using the shared install.Detect() function from the install package.
 func (m *DetectModel) runDetection() tea.Cmd {
 	return func() tea.Msg {
 		results := make([]DetectResult, 4)
 
+		env, err := install.Detect()
+
 		// Detect OpenCode CLI
-		results[0] = m.detectOpenCode()
+		results[0] = DetectResult{Name: "OpenCode CLI"}
+		if err != nil {
+			results[0].Details = "Detection failed"
+		} else if env.OpenCodeInstalled {
+			results[0].Found = true
+			if env.OpenCodeVersion != "" {
+				results[0].Details = fmt.Sprintf("Installed (%s)", env.OpenCodeVersion)
+			} else {
+				results[0].Details = "Installed (version unknown)"
+			}
+		} else {
+			results[0].Details = "Not found (will be configured)"
+		}
 
 		// Detect config directory
-		results[1] = m.detectConfigDir()
+		results[1] = DetectResult{Name: "Config directory"}
+		if err == nil && env.ConfigExists {
+			results[1].Found = true
+			results[1].Details = "~/.config/opencode/ exists"
+		} else {
+			results[1].Details = "~/.config/opencode/ (will be created)"
+		}
 
 		// Detect existing config
-		results[2] = m.detectExistingConfig()
+		results[2] = DetectResult{Name: "Existing config"}
+		if err == nil && env.ExistingConfig != "none" {
+			results[2].Found = true
+			switch env.ExistingConfig {
+			case "gentleman-dots":
+				results[2].Details = "Gentleman.Dots detected"
+			case "hefesto":
+				results[2].Details = "Hefesto configuration detected"
+			case "custom":
+				results[2].Details = "Custom configuration found"
+			default:
+				results[2].Details = "Configuration detected"
+			}
+		} else {
+			results[2].Details = "No existing configuration"
+		}
 
 		// System info
-		results[3] = m.detectSystemInfo()
+		results[3] = DetectResult{
+			Name:    "System info",
+			Found:   true,
+			Details: fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+		}
 
 		return DetectCompleteMsg{Results: results}
 	}
-}
-
-// detectOpenCode checks if OpenCode CLI is installed
-func (m *DetectModel) detectOpenCode() DetectResult {
-	result := DetectResult{Name: "OpenCode CLI"}
-
-	// Try to find opencode in PATH
-	path, err := exec.LookPath("opencode")
-	if err != nil {
-		result.Found = false
-		result.Details = "Not found (will be configured)"
-		return result
-	}
-
-	// Try to get version
-	cmd := exec.Command(path, "--version")
-	output, err := cmd.Output()
-	if err != nil {
-		result.Found = true
-		result.Details = "Installed (version unknown)"
-		return result
-	}
-
-	version := strings.TrimSpace(string(output))
-	result.Found = true
-	result.Details = fmt.Sprintf("Installed (%s)", version)
-	return result
-}
-
-// detectConfigDir checks if the config directory exists
-func (m *DetectModel) detectConfigDir() DetectResult {
-	result := DetectResult{Name: "Config directory"}
-
-	configPath := os.ExpandEnv(AppConfigPath)
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		result.Found = false
-		result.Details = "~/.config/opencode/ (will be created)"
-		return result
-	}
-
-	result.Found = true
-	result.Details = "~/.config/opencode/ exists"
-	return result
-}
-
-// detectExistingConfig checks for existing configuration
-func (m *DetectModel) detectExistingConfig() DetectResult {
-	result := DetectResult{Name: "Existing config"}
-
-	configPath := os.ExpandEnv(AppConfigPath)
-
-	// Check for AGENTS.md (indicates Gentleman.Dots or similar)
-	agentsPath := configPath + "AGENTS.md"
-	if _, err := os.Stat(agentsPath); err == nil {
-		result.Found = true
-		result.Details = "Gentleman.Dots or custom config detected"
-		return result
-	}
-
-	// Check for opencode.json
-	jsonPath := configPath + "opencode.json"
-	if _, err := os.Stat(jsonPath); err == nil {
-		result.Found = true
-		result.Details = "Custom configuration found"
-		return result
-	}
-
-	result.Found = false
-	result.Details = "No existing configuration"
-	return result
-}
-
-// detectSystemInfo gathers system information
-func (m *DetectModel) detectSystemInfo() DetectResult {
-	result := DetectResult{
-		Name:  "System info",
-		Found: true,
-	}
-
-	details := fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
-	result.Details = details
-	return result
 }
 
 // Update implements tea.Model

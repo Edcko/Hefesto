@@ -19,7 +19,7 @@ type BackupInfo struct {
 
 // ListBackups finds all backup directories in ~/.config/
 func ListBackups() ([]BackupInfo, error) {
-	homeDir, err := os.UserHomeDir()
+	homeDir, err := getUserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user home directory: %w", err)
 	}
@@ -100,7 +100,7 @@ var parseBackupTimestamp = ParseBackupTimestamp
 // Rollback restores a backup to the opencode config directory.
 // It creates a safety backup of the current config before restoring.
 func Rollback(backupPath string) (string, error) {
-	homeDir, err := os.UserHomeDir()
+	homeDir, err := getUserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to get user home directory: %w", err)
 	}
@@ -127,7 +127,7 @@ func Rollback(backupPath string) (string, error) {
 	}
 
 	// Copy backup to config location
-	if err := copyDirectory(backupPath, configPath); err != nil {
+	if err := CopyDirectory(backupPath, configPath); err != nil {
 		return "", fmt.Errorf("failed to restore backup: %w", err)
 	}
 
@@ -141,7 +141,7 @@ func PrintBackups(backups []BackupInfo) {
 	fmt.Println()
 
 	if len(backups) == 0 {
-		homeDir, _ := os.UserHomeDir()
+		homeDir, _ := getUserHomeDir()
 		configDir := filepath.Join(homeDir, ".config")
 		tildePath := "~/.config/"
 		if homeDir != "" {

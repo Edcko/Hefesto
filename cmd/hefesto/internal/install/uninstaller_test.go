@@ -444,9 +444,9 @@ func TestCopyDirectory(t *testing.T) {
 		}
 
 		dstPath := filepath.Join(dstDir, "copy")
-		err := copyDirectory(srcDir, dstPath)
+		err := CopyDirectory(srcDir, dstPath)
 		if err != nil {
-			t.Fatalf("copyDirectory failed: %v", err)
+			t.Fatalf("CopyDirectory failed: %v", err)
 		}
 
 		// Verify files were copied
@@ -465,7 +465,7 @@ func TestCopyDirectory(t *testing.T) {
 
 	t.Run("returns error for non-existent source", func(t *testing.T) {
 		dstDir := t.TempDir()
-		err := copyDirectory("/nonexistent", filepath.Join(dstDir, "copy"))
+		err := CopyDirectory("/nonexistent", filepath.Join(dstDir, "copy"))
 		if err == nil {
 			t.Error("Should return error for non-existent source")
 		}
