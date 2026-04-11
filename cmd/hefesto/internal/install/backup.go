@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/Edcko/Hefesto/cmd/hefesto/internal/logger"
 )
 
 // Backup creates a timestamped backup of the opencode config directory.
@@ -29,7 +31,7 @@ func Backup(configPath string) (string, error) {
 
 	// Create backup directory parent if needed
 	backupDir := filepath.Dir(backupPath)
-	if err := os.MkdirAll(backupDir, 0755); err != nil {
+	if err := os.MkdirAll(backupDir, 0750); err != nil {
 		return "", fmt.Errorf("failed to create backup directory: %w", err)
 	}
 
@@ -39,6 +41,7 @@ func Backup(configPath string) (string, error) {
 		return "", fmt.Errorf("failed to copy config to backup: %w", err)
 	}
 
+	logger.Debug("backup: created backup at %s from %s", backupPath, configPath)
 	return backupPath, nil
 }
 
@@ -89,11 +92,11 @@ func CopyDirectory(src, dst string) error {
 // CopyFile copies a single file from src to dst.
 func CopyFile(src, dst string) error {
 	// Open source file
-	sourceFile, err := os.Open(src)
+	sourceFile, err := os.Open(src) //nolint:gosec // G304: src is an internal path, not user input
 	if err != nil {
 		return err
 	}
-	defer sourceFile.Close()
+	defer func() { _ = sourceFile.Close() }()
 
 	// Get source file info for permissions
 	info, err := sourceFile.Stat()
@@ -102,11 +105,11 @@ func CopyFile(src, dst string) error {
 	}
 
 	// Create destination file
-	destFile, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, info.Mode())
+	destFile, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, info.Mode()) //nolint:gosec // G304: dst is an internal path
 	if err != nil {
 		return err
 	}
-	defer destFile.Close()
+	defer func() { _ = destFile.Close() }()
 
 	// Copy contents
 	_, err = io.Copy(destFile, sourceFile)

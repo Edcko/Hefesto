@@ -193,10 +193,10 @@ func TestUninstallerRun(t *testing.T) {
 		}
 
 		// Create AGENTS.md and opencode.json (required for "installed")
-		if err := os.WriteFile(filepath.Join(configPath, "AGENTS.md"), []byte("# Hefesto"), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(configPath, "AGENTS.md"), []byte("# Hefesto"), 0600); err != nil {
 			t.Fatalf("Failed to create AGENTS.md: %v", err)
 		}
-		if err := os.WriteFile(filepath.Join(configPath, "opencode.json"), []byte("{}"), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(configPath, "opencode.json"), []byte("{}"), 0600); err != nil {
 			t.Fatalf("Failed to create opencode.json: %v", err)
 		}
 

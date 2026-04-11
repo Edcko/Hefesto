@@ -2,6 +2,7 @@
 package install
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -184,7 +185,7 @@ func checkThemeDirectory(configPath string) ComponentDetail {
 func detectVersion(configPath string) string {
 	// Try to read version from AGENTS.md
 	agentsPath := filepath.Join(configPath, "AGENTS.md")
-	content, err := os.ReadFile(agentsPath)
+	content, err := os.ReadFile(agentsPath) //nolint:gosec // G304: agentsPath built from known config directory
 	if err == nil {
 		// Look for version markers in AGENTS.md
 		if strings.Contains(string(content), "Hefesto") {
@@ -197,7 +198,7 @@ func detectVersion(configPath string) string {
 
 	// Try opencode.json for version info
 	configFile := filepath.Join(configPath, "opencode.json")
-	content, err = os.ReadFile(configFile)
+	content, err = os.ReadFile(configFile) //nolint:gosec // G304: configFile built from known config directory
 	if err == nil {
 		// Simple check for version field
 		if strings.Contains(string(content), "version") {
@@ -377,4 +378,92 @@ func formatPath(path string) string {
 		return "~" + strings.TrimPrefix(path, homeDir)
 	}
 	return path
+}
+
+// ============================================
+// JSON output types
+// ============================================
+
+// StatusJSON is the JSON representation of the installation status.
+type StatusJSON struct {
+	Installed    bool       `json:"installed"`
+	Version      string     `json:"version,omitempty"`
+	ConfigPath   string     `json:"config_path,omitempty"`
+	AgentsMD     bool       `json:"agents_md"`
+	OpenCodeJSON bool       `json:"opencode_json"`
+	Theme        ThemeJSON  `json:"theme"`
+	Engram       EngramJSON `json:"engram"`
+	Plugins      bool       `json:"plugins"`
+	SkillsCount  int        `json:"skills_count"`
+}
+
+// ThemeJSON is the JSON representation of theme status.
+type ThemeJSON struct {
+	Installed bool   `json:"installed"`
+	Name      string `json:"name,omitempty"`
+	Path      string `json:"path,omitempty"`
+}
+
+// EngramJSON is the JSON representation of engram binary status.
+type EngramJSON struct {
+	Installed bool   `json:"installed"`
+	Version   string `json:"version,omitempty"`
+	Path      string `json:"path,omitempty"`
+}
+
+// PrintStatusJSON outputs the status information as JSON to stdout.
+func PrintStatusJSON(status *StatusInfo) error {
+	sj := statusToJSON(status)
+	output, err := json.MarshalIndent(sj, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal status JSON: %w", err)
+	}
+	fmt.Println(string(output))
+	return nil
+}
+
+// statusToJSON converts a StatusInfo to a StatusJSON struct.
+func statusToJSON(status *StatusInfo) StatusJSON {
+	sj := StatusJSON{
+		Installed:    status.Installed,
+		Version:      status.Version,
+		ConfigPath:   status.ConfigPath,
+		AgentsMD:     status.Components.AgentsMD.Present,
+		OpenCodeJSON: status.Components.OpenCodeJSON.Present,
+		Plugins:      status.Components.Plugins.Present,
+	}
+
+	// Theme
+	sj.Theme = ThemeJSON{
+		Installed: status.Components.Theme.Present,
+	}
+	if status.Components.Theme.Present {
+		// Detail format is "filename (size)" — extract the filename
+		detail := status.Components.Theme.Detail
+		if idx := strings.Index(detail, " ("); idx > 0 {
+			sj.Theme.Name = detail[:idx]
+		}
+		sj.Theme.Path = filepath.Join(status.ConfigPath, "themes")
+	}
+
+	// Engram binary
+	sj.Engram = EngramJSON{
+		Installed: status.Binaries.Engram.Installed,
+		Version:   status.Binaries.Engram.Version,
+		Path:      status.Binaries.Engram.Path,
+	}
+
+	// Skills count — parse from detail string like "27 directories"
+	sj.SkillsCount = parseCountFromDetail(status.Components.Skills.Detail)
+
+	return sj
+}
+
+// parseCountFromDetail extracts a number from a detail string like "27 directories" or "5 files".
+func parseCountFromDetail(detail string) int {
+	var count int
+	if _, err := fmt.Sscanf(detail, "%d", &count); err != nil {
+		return 0
+	}
+	return count
 }

@@ -120,34 +120,28 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.height = msg.Height
 		// Propagate to all screens - ignore commands for resize
 		if a.welcome != nil {
-			if m, _ := a.welcome.Update(msg); m != nil {
-				a.welcome = m.(*WelcomeModel)
-			}
+			m, _ := a.welcome.Update(msg)
+			a.welcome = m.(*WelcomeModel)
 		}
 		if a.detect != nil {
-			if m, _ := a.detect.Update(msg); m != nil {
-				a.detect = m.(*DetectModel)
-			}
+			m, _ := a.detect.Update(msg)
+			a.detect = m.(*DetectModel)
 		}
 		if a.backup != nil {
-			if m, _ := a.backup.Update(msg); m != nil {
-				a.backup = m.(*BackupModel)
-			}
+			m, _ := a.backup.Update(msg)
+			a.backup = m.(*BackupModel)
 		}
 		if a.install != nil {
-			if m, _ := a.install.Update(msg); m != nil {
-				a.install = m.(*InstallModel)
-			}
+			m, _ := a.install.Update(msg)
+			a.install = m.(*InstallModel)
 		}
 		if a.complete != nil {
-			if m, _ := a.complete.Update(msg); m != nil {
-				a.complete = m.(*CompleteModel)
-			}
+			m, _ := a.complete.Update(msg)
+			a.complete = m.(*CompleteModel)
 		}
 		if a.err != nil {
-			if m, _ := a.err.Update(msg); m != nil {
-				a.err = m.(*ErrorModel)
-			}
+			m, _ := a.err.Update(msg)
+			a.err = m.(*ErrorModel)
 		}
 
 	// Screen transition messages
@@ -200,50 +194,44 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch a.screen {
 	case ScreenWelcome:
 		if a.welcome != nil {
-			if m, cmd := a.welcome.Update(msg); m != nil {
-				a.welcome = m.(*WelcomeModel)
-				cmds = append(cmds, cmd)
-			}
+			m, cmd := a.welcome.Update(msg)
+			a.welcome = m.(*WelcomeModel)
+			cmds = append(cmds, cmd)
 		}
 
 	case ScreenDetect:
 		if a.detect != nil {
-			if m, cmd := a.detect.Update(msg); m != nil {
-				a.detect = m.(*DetectModel)
-				cmds = append(cmds, cmd)
-			}
+			m, cmd := a.detect.Update(msg)
+			a.detect = m.(*DetectModel)
+			cmds = append(cmds, cmd)
 		}
 
 	case ScreenBackup:
 		if a.backup != nil {
-			if m, cmd := a.backup.Update(msg); m != nil {
-				a.backup = m.(*BackupModel)
-				cmds = append(cmds, cmd)
-			}
+			m, cmd := a.backup.Update(msg)
+			a.backup = m.(*BackupModel)
+			cmds = append(cmds, cmd)
 		}
 
 	case ScreenInstall:
 		if a.install != nil {
-			if m, cmd := a.install.Update(msg); m != nil {
-				a.install = m.(*InstallModel)
-				cmds = append(cmds, cmd)
-			}
+			m, cmd := a.install.Update(msg)
+			a.install = m.(*InstallModel)
+			cmds = append(cmds, cmd)
 		}
 
 	case ScreenComplete:
 		if a.complete != nil {
-			if m, cmd := a.complete.Update(msg); m != nil {
-				a.complete = m.(*CompleteModel)
-				cmds = append(cmds, cmd)
-			}
+			m, cmd := a.complete.Update(msg)
+			a.complete = m.(*CompleteModel)
+			cmds = append(cmds, cmd)
 		}
 
 	case ScreenError:
 		if a.err != nil {
-			if m, cmd := a.err.Update(msg); m != nil {
-				a.err = m.(*ErrorModel)
-				cmds = append(cmds, cmd)
-			}
+			m, cmd := a.err.Update(msg)
+			a.err = m.(*ErrorModel)
+			cmds = append(cmds, cmd)
 		}
 	}
 

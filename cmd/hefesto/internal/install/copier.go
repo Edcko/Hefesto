@@ -20,7 +20,7 @@ func CopyConfig(fsys embed.FS, targetPath string) error {
 	}
 
 	// Create target directory if it doesn't exist
-	if err := os.MkdirAll(targetPath, 0755); err != nil {
+	if err := os.MkdirAll(targetPath, 0750); err != nil {
 		return fmt.Errorf("failed to create target directory: %w", err)
 	}
 
@@ -38,8 +38,8 @@ func CopyConfig(fsys embed.FS, targetPath string) error {
 		targetFilePath := filepath.Join(targetPath, path)
 
 		if d.IsDir() {
-			// Create directory with 0755 permissions
-			if err := os.MkdirAll(targetFilePath, 0755); err != nil {
+			// Create directory with 0750 permissions
+			if err := os.MkdirAll(targetFilePath, 0750); err != nil {
 				return fmt.Errorf("failed to create directory %s: %w", targetFilePath, err)
 			}
 			return nil
@@ -66,7 +66,7 @@ func copyEmbeddedFile(fsys fs.FS, srcPath, targetPath string) error {
 
 	// Create parent directories if needed
 	targetDir := filepath.Dir(targetPath)
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
+	if err := os.MkdirAll(targetDir, 0750); err != nil {
 		return fmt.Errorf("failed to create parent directory %s: %w", targetDir, err)
 	}
 

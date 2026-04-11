@@ -10,6 +10,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/Edcko/Hefesto/cmd/hefesto/internal/logger"
 )
 
 // getUserHomeDir returns the user's home directory, prioritizing the $HOME
@@ -56,6 +58,7 @@ func Detect() (*Environment, error) {
 		return nil, fmt.Errorf("failed to get user home directory: %w", err)
 	}
 	env.ConfigPath = filepath.Join(homeDir, ".config", "opencode")
+	logger.Debug("detect: config path resolved to %s", env.ConfigPath)
 
 	// Check if opencode is installed
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -71,6 +74,9 @@ func Detect() (*Environment, error) {
 		if err == nil {
 			env.OpenCodeVersion = version
 		}
+		logger.Debug("detect: opencode found at %s (version %s)", env.OpenCodePath, env.OpenCodeVersion)
+	} else {
+		logger.Debug("detect: opencode not found in PATH")
 	}
 
 	// Check if engram is installed
@@ -80,6 +86,9 @@ func Detect() (*Environment, error) {
 		if out, err := exec.Command("engram", "version").Output(); err == nil {
 			env.EngramVersion = strings.TrimSpace(string(out))
 		}
+		logger.Debug("detect: engram found at %s (version %s)", env.EngramPath, env.EngramVersion)
+	} else {
+		logger.Debug("detect: engram not found in PATH")
 	}
 
 	// Check if config directory exists AND has actual config files.
@@ -99,6 +108,7 @@ func Detect() (*Environment, error) {
 	} else {
 		env.ExistingConfig = "none"
 	}
+	logger.Debug("detect: config exists=%v, type=%s, path=%s", env.ConfigExists, env.ExistingConfig, env.ConfigPath)
 
 	return env, nil
 }
@@ -139,7 +149,7 @@ func fileExists(path string) bool {
 func detectExistingConfig(configPath string) string {
 	// Check for AGENTS.md
 	agentsPath := filepath.Join(configPath, "AGENTS.md")
-	content, err := os.ReadFile(agentsPath)
+	content, err := os.ReadFile(agentsPath) //nolint:gosec // G304: agentsPath is built from known config path
 	if err != nil {
 		return "custom"
 	}

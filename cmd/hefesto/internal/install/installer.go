@@ -8,6 +8,7 @@ import (
 	"time"
 
 	embedpkg "github.com/Edcko/Hefesto/cmd/hefesto/internal/embed"
+	"github.com/Edcko/Hefesto/cmd/hefesto/internal/logger"
 )
 
 // Step represents a step in the installation process.
@@ -71,6 +72,7 @@ func (i *Installer) Run() error {
 	}
 	i.env = env
 	i.configPath = env.ConfigPath
+	logger.Debug("install: detection complete, config path=%s", i.configPath)
 
 	i.Progress <- InstallProgress{
 		Step:    StepDetect,
@@ -98,6 +100,7 @@ func (i *Installer) Run() error {
 				return fmt.Errorf("backup failed: %w", err)
 			}
 			i.backupPath = backupPath
+			logger.Debug("install: backup created at %s", backupPath)
 		}
 
 		i.Progress <- InstallProgress{
@@ -124,6 +127,7 @@ func (i *Installer) Run() error {
 			}
 			return fmt.Errorf("failed to copy config: %w", err)
 		}
+		logger.Debug("install: config files copied to %s", i.configPath)
 	}
 
 	i.Progress <- InstallProgress{

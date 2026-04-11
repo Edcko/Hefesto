@@ -12,6 +12,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/Edcko/Hefesto/cmd/hefesto/internal/logger"
 )
 
 const (
@@ -35,10 +37,12 @@ func resolveEngramVersion() string {
 	version, err := fetchLatestEngramVersion()
 	if err != nil {
 		log.Printf("engram: failed to fetch latest version from GitHub, using fallback %s: %v", engramFallbackVersion, err)
+		logger.Debug("engram: GitHub API unreachable, using fallback version %s: %v", engramFallbackVersion, err)
 		cachedEngramVersion = engramFallbackVersion
 		return cachedEngramVersion
 	}
 
+	logger.Debug("engram: resolved latest version %s", version)
 	cachedEngramVersion = version
 	return cachedEngramVersion
 }
@@ -58,7 +62,7 @@ func fetchLatestEngramVersion() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("fetching GitHub API: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
@@ -107,12 +111,14 @@ func getEngramDownloadURL(version string) (string, error) {
 
 func InstallEngram(ctx context.Context) error {
 	version := resolveEngramVersion()
+	logger.Debug("engram: starting install, target version %s", version)
 
 	// Check if already installed
 	if _, err := exec.LookPath("engram"); err == nil {
 		// Already installed, verify version
 		out, err := exec.Command("engram", "version").Output()
 		if err == nil && strings.Contains(string(out), version) {
+			logger.Debug("engram: already installed with correct version %s", version)
 			return nil // Already installed with correct version
 		}
 	}
@@ -122,23 +128,24 @@ func InstallEngram(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("engram install: %w", err)
 	}
+	logger.Debug("engram: downloading from %s", url)
 
 	// Download and extract
 	tmpDir, err := os.MkdirTemp("", "engram-install-*")
 	if err != nil {
 		return fmt.Errorf("engram install temp dir: %w", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Download
 	tarPath := tmpDir + "/engram.tar.gz"
-	curlCmd := exec.CommandContext(ctx, "curl", "-fsSL", url, "-o", tarPath)
+	curlCmd := exec.CommandContext(ctx, "curl", "-fsSL", url, "-o", tarPath) //nolint:gosec // G204: curl with controlled URL from GitHub API
 	if out, err := curlCmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("engram download failed: %w\n%s", err, out)
 	}
 
 	// Extract
-	tarCmd := exec.Command("tar", "-xzf", tarPath, "-C", tmpDir)
+	tarCmd := exec.Command("tar", "-xzf", tarPath, "-C", tmpDir) //nolint:gosec // G204: tar with controlled paths
 	if out, err := tarCmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("engram extract failed: %w\n%s", err, out)
 	}
@@ -154,17 +161,21 @@ func InstallEngram(ctx context.Context) error {
 	if err := os.Rename(binaryPath, targetPath); err != nil {
 		// Try with sudo or user-local bin
 		targetPath = os.Getenv("HOME") + "/.local/bin/engram"
-		os.MkdirAll(os.Getenv("HOME")+"/.local/bin", 0755)
+		if err := os.MkdirAll(os.Getenv("HOME")+"/.local/bin", 0750); err != nil { //nolint:gosec // G703: HOME/.local/bin is a known safe system path
+			return fmt.Errorf("engram install create bin dir: %w", err)
+		}
 		if err := CopyFile(binaryPath, targetPath); err != nil {
 			return fmt.Errorf("engram install to %s: %w", targetPath, err)
 		}
 	}
 
 	// Make executable
-	os.Chmod(targetPath, 0755)
+	if err := os.Chmod(targetPath, 0755); err != nil { //nolint:gosec // G302: binary must be executable
+		return fmt.Errorf("engram install chmod: %w", err)
+	}
 
 	// Verify
-	out, err := exec.Command(targetPath, "version").Output()
+	out, err := exec.Command(targetPath, "version").Output() //nolint:gosec // G702: targetPath is a controlled binary path
 	if err != nil {
 		return fmt.Errorf("engram verify failed: %w", err)
 	}

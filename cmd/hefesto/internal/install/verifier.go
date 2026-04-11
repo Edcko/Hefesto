@@ -51,7 +51,7 @@ func Verify(configPath string) (*VerifyResult, error) {
 func verifyConfigJSON(configPath string, result *VerifyResult) bool {
 	configFile := filepath.Join(configPath, "opencode.json")
 
-	content, err := os.ReadFile(configFile)
+	content, err := os.ReadFile(configFile) //nolint:gosec // G304: configFile built from known config directory
 	if err != nil {
 		result.Errors = append(result.Errors, fmt.Sprintf("opencode.json not found: %v", err))
 		return false

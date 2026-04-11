@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/Edcko/Hefesto/cmd/hefesto/internal/logger"
 )
 
 // BackupInfo holds information about a backup directory.
@@ -131,6 +133,7 @@ func Rollback(backupPath string) (string, error) {
 		return "", fmt.Errorf("failed to restore backup: %w", err)
 	}
 
+	logger.Debug("rollback: restored backup from %s to %s, safety=%s", backupPath, configPath, safetyBackupPath)
 	return safetyBackupPath, nil
 }
 

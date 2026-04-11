@@ -1,0 +1,29 @@
+version: "2"
+
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+    - gosec
+  exclusions:
+    rules:
+      # Exclude test files from some linters
+      - path: '_test\.go'
+        linters:
+          - gosec
+          - errcheck
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+  gosec:
+    excludes:
+      - G101 # hardcoded credentials (false positives on config vars)
+      - G404 # weak random (acceptable for non-crypto use)

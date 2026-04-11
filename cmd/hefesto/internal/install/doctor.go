@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/Edcko/Hefesto/cmd/hefesto/internal/logger"
 )
 
 // DoctorResult holds the results of the doctor diagnostic.
@@ -91,6 +93,7 @@ func RunDoctor() (*DoctorResult, int) {
 		exitCode = 1
 	}
 
+	logger.Debug("doctor: checks complete, errors=%v, warnings=%v, exitCode=%d", hasErrors, hasWarnings, exitCode)
 	return result, exitCode
 }
 
@@ -125,22 +128,22 @@ func checkConfigDir() CheckResult {
 	}
 
 	// Check if readable
-	file, err := os.Open(configPath)
+	file, err := os.Open(configPath) //nolint:gosec // G304: configPath is a known system directory
 	if err != nil {
 		result.Passed = false
 		result.Errors = append(result.Errors, "~/.config/opencode/ is not readable")
 		return result
 	}
-	file.Close()
+	defer func() { _ = file.Close() }()
 
 	// Check if writable by trying to create a temp file
 	testFile := filepath.Join(configPath, ".hefesto-write-test")
-	f, err := os.Create(testFile)
+	f, err := os.Create(testFile) //nolint:gosec // G304: testFile is a known temp path inside config
 	if err != nil {
 		result.Warnings = append(result.Warnings, "~/.config/opencode/ is not writable")
 	} else {
-		f.Close()
-		os.Remove(testFile)
+		defer func() { _ = f.Close() }()
+		_ = os.Remove(testFile)
 		result.Details = append(result.Details, "Readable and writable")
 	}
 
@@ -173,7 +176,7 @@ func checkAgentsMD() CheckResult {
 	}
 
 	// Read content
-	content, err := os.ReadFile(agentsPath)
+	content, err := os.ReadFile(agentsPath) //nolint:gosec // G304: agentsPath is built from getUserHomeDir, not user input
 	if err != nil {
 		result.Passed = false
 		result.Errors = append(result.Errors, "Cannot read AGENTS.md")
@@ -206,7 +209,7 @@ func checkOpenCodeJSON() CheckResult {
 	configPath := filepath.Join(homeDir, ".config", "opencode", "opencode.json")
 
 	// Check if file exists
-	content, err := os.ReadFile(configPath)
+	content, err := os.ReadFile(configPath) //nolint:gosec // G304: configPath is built from getUserHomeDir, not user input
 	if err != nil {
 		result.Passed = false
 		result.Errors = append(result.Errors, "opencode.json does not exist")
@@ -249,9 +252,8 @@ func checkOpenCodeJSON() CheckResult {
 				// Check if prompt uses relative path (starts with ./) instead of absolute
 				if strings.HasPrefix(prompt, "{file:./") {
 					relativePathCount++
-				} else if strings.HasPrefix(prompt, "{file:~/.config") || strings.HasPrefix(prompt, "{file:~/") {
-					// Absolute path is good
 				}
+				// Absolute paths ({file:~/.config, {file:~/) are considered valid
 			}
 			// Check for missing steps limit on subagents
 			if mode, ok := ac["mode"].(string); ok && mode == "subagent" {
@@ -316,11 +318,9 @@ func checkSkills() CheckResult {
 		}
 	}
 
-	// Count _shared as well if it exists
-	sharedPath := filepath.Join(skillsPath, "_shared")
-	if sharedInfo, err := os.Stat(sharedPath); err == nil && sharedInfo.IsDir() {
-		// _shared is a special directory, count it
-	}
+	// _shared is a special directory that exists alongside skills but is not a skill itself.
+	// We intentionally do not count it toward the skill total.
+	_ = filepath.Join(skillsPath, "_shared")
 
 	result.Details = append(result.Details, fmt.Sprintf("%d skills found", skillCount))
 
@@ -510,7 +510,7 @@ func checkTheme() CheckResult {
 
 			// Validate JSON
 			themePath := filepath.Join(themesPath, c.Name())
-			content, err := os.ReadFile(themePath)
+			content, err := os.ReadFile(themePath) //nolint:gosec // G304: themePath built from known config directory
 			if err != nil {
 				result.Warnings = append(result.Warnings, fmt.Sprintf("Cannot read %s", c.Name()))
 				continue
@@ -705,6 +705,135 @@ func PrintDoctor(result *DoctorResult) {
 	fmt.Println()
 }
 
+// ============================================
+// JSON output types
+// ============================================
+
+// DoctorJSON is the JSON representation of the doctor diagnostic results.
+type DoctorJSON struct {
+	Healthy bool        `json:"healthy"`
+	Checks  []CheckJSON `json:"checks"`
+}
+
+// CheckJSON is the JSON representation of a single diagnostic check.
+type CheckJSON struct {
+	Name    string `json:"name"`
+	Status  string `json:"status"` // "pass", "warn", "fail"
+	Message string `json:"message"`
+	Fix     string `json:"fix,omitempty"`
+}
+
+// PrintDoctorJSON outputs the doctor results as JSON to stdout.
+func PrintDoctorJSON(result *DoctorResult) error {
+	dj := doctorResultToJSON(result)
+	output, err := json.MarshalIndent(dj, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal doctor JSON: %w", err)
+	}
+	fmt.Println(string(output))
+	return nil
+}
+
+// doctorResultToJSON converts a DoctorResult to a DoctorJSON struct.
+func doctorResultToJSON(result *DoctorResult) DoctorJSON {
+	type namedCheck struct {
+		name   string
+		result CheckResult
+	}
+
+	checks := []namedCheck{
+		{"Config Directory", result.ConfigDir},
+		{"AGENTS.md", result.AgentsMD},
+		{"opencode.json", result.OpenCodeJSON},
+		{"Skills", result.Skills},
+		{"Plugins", result.Plugins},
+		{"Engram", result.Engram},
+		{"OpenCode", result.OpenCode},
+		{"Theme", result.Theme},
+		{"Personality", result.Personality},
+		{"Commands", result.Commands},
+	}
+
+	allHealthy := true
+	jsonChecks := make([]CheckJSON, 0, len(checks))
+
+	for _, c := range checks {
+		status := "pass"
+		if len(c.result.Errors) > 0 {
+			status = "fail"
+			allHealthy = false
+		} else if len(c.result.Warnings) > 0 {
+			status = "warn"
+			// Warnings don't make it unhealthy (exit code 1 but healthy=false only for errors)
+		}
+
+		// Build a message from details, warnings, and errors
+		message := buildCheckMessage(c.result)
+
+		// Build fix suggestion for failures
+		fix := ""
+		if status == "fail" {
+			fix = buildFixSuggestion(c.name)
+		}
+
+		if status != "pass" {
+			allHealthy = false
+		}
+
+		jsonChecks = append(jsonChecks, CheckJSON{
+			Name:    c.name,
+			Status:  status,
+			Message: message,
+			Fix:     fix,
+		})
+	}
+
+	return DoctorJSON{
+		Healthy: allHealthy,
+		Checks:  jsonChecks,
+	}
+}
+
+// buildCheckMessage creates a human-readable message from a CheckResult.
+func buildCheckMessage(cr CheckResult) string {
+	parts := make([]string, 0, len(cr.Details)+len(cr.Warnings)+len(cr.Errors))
+	parts = append(parts, cr.Details...)
+	parts = append(parts, cr.Warnings...)
+	parts = append(parts, cr.Errors...)
+	if len(parts) == 0 {
+		return "OK"
+	}
+	return strings.Join(parts, "; ")
+}
+
+// buildFixSuggestion returns a fix suggestion for a failed check.
+func buildFixSuggestion(checkName string) string {
+	switch checkName {
+	case "Config Directory":
+		return "Run `hefesto install` to create the configuration directory"
+	case "AGENTS.md":
+		return "Run `hefesto install` to deploy AGENTS.md"
+	case "opencode.json":
+		return "Run `hefesto install` to deploy opencode.json"
+	case "Skills":
+		return "Run `hefesto install` to install skills"
+	case "Plugins":
+		return "Run `hefesto install` to set up plugins and run `npm install`"
+	case "Engram":
+		return "Install engram with: brew install engram"
+	case "OpenCode":
+		return "Install opencode CLI"
+	case "Theme":
+		return "Run `hefesto install` to deploy theme files"
+	case "Personality":
+		return "Run `hefesto install` to deploy personality configuration"
+	case "Commands":
+		return "Run `hefesto install` to deploy slash commands"
+	default:
+		return "Run `hefesto install` to fix this issue"
+	}
+}
+
 // Helper functions
 
 // isValidUTF8 checks if a byte slice is valid UTF-8.
@@ -748,6 +877,8 @@ func extractNumber(s string) int {
 		return 0
 	}
 	var num int
-	fmt.Sscanf(match, "%d", &num)
+	if _, err := fmt.Sscanf(match, "%d", &num); err != nil {
+		return 0
+	}
 	return num
 }

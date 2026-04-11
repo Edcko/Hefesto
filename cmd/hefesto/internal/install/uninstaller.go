@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/Edcko/Hefesto/cmd/hefesto/internal/logger"
 )
 
 // UninstallProgress represents progress updates during uninstallation.
@@ -47,6 +49,7 @@ func (u *Uninstaller) Run() error {
 	}
 	u.homeDir = homeDir
 	u.configPath = filepath.Join(homeDir, ".config", "opencode")
+	logger.Debug("uninstall: config path=%s, purge=%v", u.configPath, u.purge)
 
 	// Step 1: Detect installation
 	u.Progress <- UninstallProgress{

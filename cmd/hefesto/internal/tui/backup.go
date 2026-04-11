@@ -90,7 +90,7 @@ func (m *BackupModel) runBackup() tea.Cmd {
 		backupPath := os.ExpandEnv(m.backupPath)
 
 		// Create backup directory
-		if err := os.MkdirAll(backupPath, 0755); err != nil {
+		if err := os.MkdirAll(backupPath, 0750); err != nil {
 			return BackupCompleteMsg{Error: err.Error()}
 		}
 

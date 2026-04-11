@@ -23,7 +23,7 @@ func TestListBackupsInDir(t *testing.T) {
 	t.Run("one backup exists", func(t *testing.T) {
 		dir := t.TempDir()
 		backupPath := filepath.Join(dir, "opencode-backup-20260406-160143")
-		if err := os.MkdirAll(backupPath, 0755); err != nil {
+		if err := os.MkdirAll(backupPath, 0750); err != nil {
 			t.Fatalf("Failed to create backup directory: %v", err)
 		}
 
@@ -47,7 +47,7 @@ func TestListBackupsInDir(t *testing.T) {
 		backup3 := filepath.Join(dir, "opencode-backup-20260403-173508")
 
 		for _, b := range []string{backup1, backup2, backup3} {
-			if err := os.MkdirAll(b, 0755); err != nil {
+			if err := os.MkdirAll(b, 0750); err != nil {
 				t.Fatalf("Failed to create backup directory: %v", err)
 			}
 		}
@@ -142,7 +142,7 @@ func TestListBackupsInDir(t *testing.T) {
 		dir := t.TempDir()
 		// Create a file with backup pattern name
 		filePath := filepath.Join(dir, "opencode-backup-20260406-160143")
-		if err := os.WriteFile(filePath, []byte("test"), 0644); err != nil {
+		if err := os.WriteFile(filePath, []byte("test"), 0600); err != nil {
 			t.Fatalf("Failed to create file: %v", err)
 		}
 

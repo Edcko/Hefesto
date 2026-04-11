@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	embedpkg "github.com/Edcko/Hefesto/cmd/hefesto/internal/embed"
+	"github.com/Edcko/Hefesto/cmd/hefesto/internal/logger"
 )
 
 // ChangeType represents the type of change detected for a file.
@@ -155,7 +156,7 @@ func ComputeDiff(fsys embed.FS, configPath string) (*DiffResult, error) {
 		embeddedHash := hashContent(embeddedContent)
 		embeddedSize := int64(len(embeddedContent))
 
-		installedContent, err := os.ReadFile(installedPath)
+		installedContent, err := os.ReadFile(installedPath) //nolint:gosec // G304: installedPath built from known config directory
 		if os.IsNotExist(err) {
 			// File doesn't exist - it's new
 			diff := FileDiff{
@@ -283,6 +284,7 @@ func (u *Updater) Run() error {
 		Message: fmt.Sprintf("Found %d added, %d modified, %d unchanged", diff.Summary.Added, diff.Summary.Modified, diff.Summary.Unchanged),
 		Done:    true,
 	}
+	logger.Debug("update: diff results — added=%d, modified=%d, unchanged=%d", diff.Summary.Added, diff.Summary.Modified, diff.Summary.Unchanged)
 
 	// Step 3: Create backup (skip in dry-run)
 	if !u.dryRun {
@@ -623,7 +625,9 @@ func RunUpdate(dryRun, skipConfirm bool) error {
 	if !skipConfirm {
 		fmt.Printf("  Continue with update? [y/N] ")
 		var response string
-		fmt.Scanln(&response)
+		if _, err := fmt.Scanln(&response); err != nil {
+			return fmt.Errorf("failed to read response: %w", err)
+		}
 		if strings.ToLower(response) != "y" && strings.ToLower(response) != "yes" {
 			fmt.Println()
 			fmt.Println("  Update cancelled.")
@@ -676,12 +680,12 @@ func (u *Updater) GetCurrentBackupPath() string {
 
 // CompareFiles compares two files and returns true if they differ.
 func CompareFiles(path1, path2 string) (bool, error) {
-	content1, err := os.ReadFile(path1)
+	content1, err := os.ReadFile(path1) //nolint:gosec // G304: paths are internal config paths
 	if err != nil {
 		return false, err
 	}
 
-	content2, err := os.ReadFile(path2)
+	content2, err := os.ReadFile(path2) //nolint:gosec // G304: paths are internal config paths
 	if err != nil {
 		return false, err
 	}

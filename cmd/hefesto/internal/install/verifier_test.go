@@ -13,7 +13,9 @@ func TestVerify(t *testing.T) {
 	targetPath := filepath.Join(tmpDir, "opencode")
 
 	// Copy config first
-	CopyConfig(embedpkg.ConfigFiles, targetPath)
+	if err := CopyConfig(embedpkg.ConfigFiles, targetPath); err != nil {
+		t.Fatalf("CopyConfig failed: %v", err)
+	}
 
 	result, err := Verify(targetPath)
 	if err != nil {
@@ -101,7 +103,9 @@ func TestVerifyNpmInstalled(t *testing.T) {
 	targetPath := filepath.Join(tmpDir, "opencode")
 
 	// Copy config
-	CopyConfig(embedpkg.ConfigFiles, targetPath)
+	if err := CopyConfig(embedpkg.ConfigFiles, targetPath); err != nil {
+		t.Fatalf("CopyConfig failed: %v", err)
+	}
 
 	// Create fake node_modules/@opencode-ai/plugin
 	pluginPath := filepath.Join(targetPath, "node_modules", "@opencode-ai", "plugin")
@@ -122,7 +126,9 @@ func TestVerifyNpmNotInstalled(t *testing.T) {
 	targetPath := filepath.Join(tmpDir, "opencode")
 
 	// Copy config (without node_modules)
-	CopyConfig(embedpkg.ConfigFiles, targetPath)
+	if err := CopyConfig(embedpkg.ConfigFiles, targetPath); err != nil {
+		t.Fatalf("CopyConfig failed: %v", err)
+	}
 
 	result, err := Verify(targetPath)
 	if err != nil {

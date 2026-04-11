@@ -23,9 +23,6 @@ type DetectModel struct {
 
 	// Detection results
 	results []DetectResult
-
-	// App state to update
-	app *App
 }
 
 // DetectResult represents a single detection result

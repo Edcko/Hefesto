@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Edcko/Hefesto/cmd/hefesto/internal/install"
+	"github.com/Edcko/Hefesto/cmd/hefesto/internal/logger"
 	"github.com/Edcko/Hefesto/cmd/hefesto/internal/tui"
 	"github.com/spf13/cobra"
 )
@@ -18,6 +19,10 @@ var (
 )
 
 func main() {
+	// Initialize logger before anything else.
+	logger.Init(verbose)
+	defer logger.Close()
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -50,6 +55,7 @@ The installer will:
 }
 
 var (
+	verbose        bool // global --verbose flag
 	installYes     bool
 	installDryRun  bool
 	rollbackYes    bool
@@ -59,6 +65,8 @@ var (
 	updateYes      bool
 	updateDryRun   bool
 	statusVerbose  bool
+	statusJSON     bool
+	doctorJSON     bool
 )
 
 func runInstall(cmd *cobra.Command, args []string) error {
@@ -161,6 +169,9 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to check status: %w", err)
 	}
+	if statusJSON {
+		return install.PrintStatusJSON(status)
+	}
 	if statusVerbose {
 		install.PrintStatusVerbose(status)
 	} else {
@@ -190,6 +201,14 @@ Checks:
 
 func runDoctor(cmd *cobra.Command, args []string) error {
 	result, exitCode := install.RunDoctor()
+	if doctorJSON {
+		if err := install.PrintDoctorJSON(result); err != nil {
+			os.Exit(1)
+			return nil
+		}
+		os.Exit(exitCode)
+		return nil
+	}
 	install.PrintDoctor(result)
 	os.Exit(exitCode)
 	return nil
@@ -250,7 +269,9 @@ func runRollback(cmd *cobra.Command, args []string) error {
 	fmt.Print("  Restore this backup? [y/N]: ")
 
 	var response string
-	fmt.Scanln(&response)
+	if _, err := fmt.Scanln(&response); err != nil {
+		return fmt.Errorf("failed to read response: %w", err)
+	}
 
 	if strings.ToLower(response) != "y" && strings.ToLower(response) != "yes" {
 		fmt.Println()
@@ -279,6 +300,9 @@ var versionCmd = &cobra.Command{
 }
 
 func init() {
+	// Global persistent flag: --verbose / -V
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "V", false, "enable debug logging")
+
 	// Install command flags
 	installCmd.Flags().BoolVarP(&installYes, "yes", "y", false, "non-interactive mode, accept all defaults")
 	installCmd.Flags().BoolVarP(&installDryRun, "dry-run", "d", false, "show what would happen without making changes")
@@ -297,6 +321,10 @@ func init() {
 
 	// Status command flags
 	statusCmd.Flags().BoolVarP(&statusVerbose, "verbose", "v", false, "Show detailed status information")
+	statusCmd.Flags().BoolVar(&statusJSON, "json", false, "Output status in JSON format")
+
+	// Doctor command flags
+	doctorCmd.Flags().BoolVar(&doctorJSON, "json", false, "Output doctor results in JSON format")
 
 	// Add commands to root
 	rootCmd.AddCommand(installCmd)

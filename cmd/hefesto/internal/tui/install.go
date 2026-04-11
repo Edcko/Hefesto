@@ -71,8 +71,7 @@ type InstallModel struct {
 	startTime time.Time
 
 	// Real installer components
-	env       *install.Environment
-	installer *install.Installer
+	env *install.Environment
 
 	// Installation results for final report
 	verifyResult *install.VerifyResult
