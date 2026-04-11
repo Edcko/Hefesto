@@ -104,6 +104,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	// Launch interactive TUI
+	tui.SetVersion(version)
 	return tui.Run()
 }
 
@@ -167,7 +168,7 @@ Use 'brew upgrade hefesto' to update the binary.`,
 }
 
 func runUpdate(cmd *cobra.Command, args []string) error {
-	return install.RunUpdate(updateDryRun, updateYes)
+	return install.RunUpdate(updateDryRun, updateYes, version)
 }
 
 var statusCmd = &cobra.Command{
@@ -277,6 +278,16 @@ func runRollback(cmd *cobra.Command, args []string) error {
 	}
 
 	// Interactive mode - confirm before rollback
+	// Check if stdin is a terminal (not piped/redirected)
+	stat, _ := os.Stdin.Stat()
+	if (stat.Mode() & os.ModeCharDevice) == 0 {
+		fmt.Println()
+		fmt.Println("  ❌ Interactive terminal required for rollback confirmation.")
+		fmt.Println("  Use --yes flag to skip confirmation in non-interactive environments.")
+		fmt.Println()
+		return fmt.Errorf("non-interactive terminal: use --yes to skip confirmation")
+	}
+
 	fmt.Println()
 	fmt.Println("🔥 Hefesto Rollback")
 	fmt.Println()

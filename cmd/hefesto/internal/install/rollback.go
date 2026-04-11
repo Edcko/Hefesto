@@ -134,6 +134,12 @@ func Rollback(backupPath string) (string, error) {
 	}
 
 	logger.Debug("rollback: restored backup from %s to %s, safety=%s", backupPath, configPath, safetyBackupPath)
+
+	// Cleanup old backups (non-fatal)
+	if err := CleanOldBackups(); err != nil {
+		logger.Debug("rollback: backup cleanup failed (non-fatal): %v", err)
+	}
+
 	return safetyBackupPath, nil
 }
 

@@ -197,23 +197,32 @@ func BannerStyle() string {
 
 // ===== Version Handling =====
 
-// getVersion extracts version from build info or returns default
-func getVersion() string {
+// Version holds the current Hefesto version. It is initialized from build
+// info at package load time, but should be overridden by the main package's
+// ldflags-driven version via SetVersion for consistency.
+var Version = initVersion()
+
+// initVersion extracts version from build info or returns a default.
+func initVersion() string {
 	if info, ok := debug.ReadBuildInfo(); ok {
-		// Try to get version from Go module info
 		for _, setting := range info.Settings {
 			if setting.Key == "vcs.revision" {
 				if len(setting.Value) >= 7 {
-					return "v0.1.0-" + setting.Value[:7]
+					return "dev-" + setting.Value[:7]
 				}
 			}
 		}
 	}
-	return "v0.1.0"
+	return "dev"
 }
 
-// Version holds the current Hefesto version
-var Version = getVersion()
+// SetVersion overrides the package-level Version. Call this from main after
+// flag parsing so the TUI uses the same ldflags-driven version as the CLI.
+func SetVersion(v string) {
+	if v != "" {
+		Version = v
+	}
+}
 
 // VersionStyle returns styled version string
 func VersionStyle() string {

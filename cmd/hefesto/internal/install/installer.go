@@ -260,6 +260,14 @@ func (i *Installer) Run() error {
 		}
 	}
 
+	// Step 7: Cleanup old backups
+	if !i.dryRun {
+		if err := CleanOldBackups(); err != nil {
+			// Backup cleanup failure is non-fatal
+			logger.Debug("install: backup cleanup failed (non-fatal): %v", err)
+		}
+	}
+
 	return nil
 }
 

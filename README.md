@@ -66,7 +66,7 @@ opencode
 | `hefesto install` | Install Hefesto configuration files | `--yes`, `--dry-run` |
 | `hefesto status` | Show installation status | `--verbose` |
 | `hefesto doctor` | Run comprehensive health diagnostics | — |
-| `hefesto update` | Update to latest configuration | `--yes`, `--dry-run` |
+| `hefesto update` | Update to latest configuration (not the binary) | `--yes`, `--dry-run` |
 | `hefesto uninstall` | Remove Hefesto configuration | `--yes`, `--purge` |
 | `hefesto rollback` | Restore a previous backup | `--yes`, `--list` |
 | `hefesto version` | Print version information | — |
@@ -79,6 +79,13 @@ opencode
 - Deploys embedded configuration files
 - Sets up skills, themes, plugins, and commands
 - Flags: `--yes` (non-interactive), `--dry-run` (preview changes)
+
+**`hefesto update`**
+- Creates timestamped backup of current configuration
+- Overlays latest embedded config files (preserves customizations where possible)
+- **Important**: This only updates configuration files, NOT the Hefesto binary itself
+- To update the binary: `brew upgrade hefesto` or download from [GitHub Releases](https://github.com/Edcko/Hefesto/releases)
+- Flags: `--yes` (skip confirmation), `--dry-run` (preview changes)
 
 **`hefesto doctor`**
 Runs comprehensive checks on:

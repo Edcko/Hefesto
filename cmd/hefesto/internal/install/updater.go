@@ -5,8 +5,10 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"io/fs"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +16,8 @@ import (
 	embedpkg "github.com/Edcko/Hefesto/cmd/hefesto/internal/embed"
 	"github.com/Edcko/Hefesto/cmd/hefesto/internal/logger"
 )
+
+const hefestoGitHubAPI = "https://api.github.com/repos/Edcko/Hefesto/releases/latest"
 
 // ChangeType represents the type of change detected for a file.
 type ChangeType string
@@ -418,6 +422,14 @@ func (u *Updater) Run() error {
 		}
 	}
 
+	// Step 7: Cleanup old backups
+	if !u.dryRun {
+		if err := CleanOldBackups(); err != nil {
+			// Backup cleanup failure is non-fatal
+			logger.Debug("update: backup cleanup failed (non-fatal): %v", err)
+		}
+	}
+
 	return nil
 }
 
@@ -578,7 +590,9 @@ func PrintUpdateResult(diff *DiffResult, backupPath string, dryRun bool) {
 }
 
 // RunUpdate is a convenience function that creates and runs an updater.
-func RunUpdate(dryRun, skipConfirm bool) error {
+// currentVersion is the Hefesto binary version (from ldflags) used to check
+// for binary updates on GitHub Releases.
+func RunUpdate(dryRun, skipConfirm bool, currentVersion string) error {
 	// First, check status and compute diff
 	status, err := CheckStatus()
 	if err != nil {
@@ -670,10 +684,11 @@ func RunUpdate(dryRun, skipConfirm bool) error {
 	// Print final result
 	PrintUpdateResult(diff, updater.backupPath, false)
 
+	// Check if a newer Hefesto binary is available
+	PrintBinaryUpdateNote(currentVersion)
+
 	return nil
 }
-
-// GetCurrentBackupPath returns the path to the backup created during update.
 func (u *Updater) GetCurrentBackupPath() string {
 	return u.backupPath
 }
@@ -691,4 +706,60 @@ func CompareFiles(path1, path2 string) (bool, error) {
 	}
 
 	return !bytes.Equal(content1, content2), nil
+}
+
+// fetchLatestHefestoVersion queries the GitHub releases API for the latest
+// Hefesto version tag. Returns empty string on any error (non-fatal).
+func fetchLatestHefestoVersion() string {
+	version, err := fetchLatestVersionFromGitHub(hefestoGitHubAPI)
+	if err != nil {
+		logger.Debug("update: could not check for newer Hefesto binary: %v", err)
+		return ""
+	}
+	return version
+}
+
+// fetchLatestVersionFromGitHub calls a GitHub releases API URL and returns
+// the latest version tag (without "v" prefix). Returns empty string on error.
+func fetchLatestVersionFromGitHub(apiURL string) (string, error) {
+	resp, err := http.DefaultClient.Get(apiURL) //nolint:gosec // G107: API URL is a constant
+	if err != nil {
+		return "", fmt.Errorf("fetching GitHub API: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
+	}
+
+	var release struct {
+		TagName string `json:"tag_name"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		return "", fmt.Errorf("decoding GitHub response: %w", err)
+	}
+
+	version := strings.TrimPrefix(release.TagName, "v")
+	if version == "" {
+		return "", fmt.Errorf("empty version tag from GitHub API")
+	}
+	return version, nil
+}
+
+// PrintBinaryUpdateNote checks if a newer Hefesto binary is available on
+// GitHub Releases and prints a notice if so. This is a non-fatal, best-effort
+// check — network failures are silently ignored.
+func PrintBinaryUpdateNote(currentVersion string) {
+	latest := fetchLatestHefestoVersion()
+	if latest == "" {
+		return
+	}
+	// Strip leading "v" for comparison
+	current := strings.TrimPrefix(currentVersion, "v")
+	if latest != current && current != "" && current != "0.1.0" {
+		fmt.Println()
+		fmt.Printf("  💡 Note: Hefesto binary v%s is available (you have %s).\n", latest, currentVersion)
+		fmt.Println("     Update the binary with: brew upgrade hefesto")
+		fmt.Println()
+	}
 }

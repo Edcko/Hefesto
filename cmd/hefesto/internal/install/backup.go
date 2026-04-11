@@ -11,6 +11,10 @@ import (
 	"github.com/Edcko/Hefesto/cmd/hefesto/internal/logger"
 )
 
+// maxBackups is the maximum number of backup directories to keep.
+// Older backups beyond this limit are removed after install, update, or rollback.
+const maxBackups = 5
+
 // Backup creates a timestamped backup of the opencode config directory.
 // Returns the path to the backup directory or an error.
 func Backup(configPath string) (string, error) {
@@ -132,4 +136,63 @@ func CopyPath(src, dst string) error {
 		return CopyDirectory(src, dst)
 	}
 	return CopyFile(src, dst)
+}
+
+// CleanOldBackups removes old backup directories, keeping only the N most
+// recent ones (where N = maxBackups). It lists all opencode-backup-* dirs in
+// ~/.config/, sorts them by timestamp (newest first), and removes any beyond
+// the retention limit.
+//
+// This function is safe: if there are maxBackups or fewer backups, nothing is
+// deleted. Errors during individual removal are logged but do not stop the
+// cleanup of remaining backups.
+func CleanOldBackups() error {
+	backups, err := ListBackups()
+	if err != nil {
+		return fmt.Errorf("failed to list backups for cleanup: %w", err)
+	}
+
+	if len(backups) <= maxBackups {
+		logger.Debug("backup-cleanup: %d backups found, within limit of %d — nothing to remove", len(backups), maxBackups)
+		return nil
+	}
+
+	// backups are sorted newest-first by ListBackups, so remove from index maxBackups onward
+	toRemove := backups[maxBackups:]
+	var removed int
+	for _, b := range toRemove {
+		if err := os.RemoveAll(b.Path); err != nil {
+			logger.Debug("backup-cleanup: failed to remove %s: %v", b.Name, err)
+			continue
+		}
+		logger.Debug("backup-cleanup: removed old backup %s", b.Name)
+		removed++
+	}
+
+	logger.Debug("backup-cleanup: removed %d/%d old backups (kept %d most recent)", removed, len(toRemove), maxBackups)
+	return nil
+}
+
+// CleanOldBackupsInDir is the testable version of CleanOldBackups that
+// operates on an arbitrary directory instead of ~/.config/.
+func CleanOldBackupsInDir(dir string) error {
+	backups, err := ListBackupsInDir(dir)
+	if err != nil {
+		return fmt.Errorf("failed to list backups for cleanup: %w", err)
+	}
+
+	if len(backups) <= maxBackups {
+		return nil
+	}
+
+	toRemove := backups[maxBackups:]
+	for _, b := range toRemove {
+		if err := os.RemoveAll(b.Path); err != nil {
+			logger.Debug("backup-cleanup: failed to remove %s: %v", b.Name, err)
+			continue
+		}
+		logger.Debug("backup-cleanup: removed old backup %s", b.Name)
+	}
+
+	return nil
 }

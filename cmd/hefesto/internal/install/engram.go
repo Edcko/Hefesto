@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -156,17 +157,26 @@ func InstallEngram(ctx context.Context) error {
 		return fmt.Errorf("engram binary not found in archive")
 	}
 
-	// Move to /usr/local/bin (or user-writable location)
-	targetPath := "/usr/local/bin/engram"
-	if err := os.Rename(binaryPath, targetPath); err != nil {
-		// Try with sudo or user-local bin
-		targetPath = os.Getenv("HOME") + "/.local/bin/engram"
-		if err := os.MkdirAll(os.Getenv("HOME")+"/.local/bin", 0750); err != nil { //nolint:gosec // G703: HOME/.local/bin is a known safe system path
-			return fmt.Errorf("engram install create bin dir: %w", err)
-		}
-		if err := CopyFile(binaryPath, targetPath); err != nil {
-			return fmt.Errorf("engram install to %s: %w", targetPath, err)
-		}
+	// Install to user-local bin directory first (no sudo needed),
+	// then fall back to /usr/local/bin only if writable.
+	homeDir := os.Getenv("HOME")
+	localBin := filepath.Join(homeDir, ".local", "bin")
+	systemBin := "/usr/local/bin"
+
+	var targetPath string
+
+	// Prefer user-local directory — always writable without sudo
+	if err := os.MkdirAll(localBin, 0750); err == nil { //nolint:gosec // G703: HOME/.local/bin is a known safe system path
+		targetPath = filepath.Join(localBin, "engram")
+	} else if isDirWritable(systemBin) {
+		// Fall back to system bin only if writable
+		targetPath = filepath.Join(systemBin, "engram")
+	} else {
+		return fmt.Errorf("engram install: neither %s nor %s is writable", localBin, systemBin)
+	}
+
+	if err := CopyFile(binaryPath, targetPath); err != nil {
+		return fmt.Errorf("engram install to %s: %w", targetPath, err)
 	}
 
 	// Make executable
@@ -185,4 +195,17 @@ func InstallEngram(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// isDirWritable checks if a directory exists and is writable by attempting
+// to create a temporary file inside it.
+func isDirWritable(dir string) bool {
+	testFile := filepath.Join(dir, ".hefesto-write-test")
+	f, err := os.Create(testFile) //nolint:gosec // G304: testFile is a known temp path
+	if err != nil {
+		return false
+	}
+	_ = f.Close()
+	_ = os.Remove(testFile)
+	return true
 }

@@ -108,29 +108,29 @@ jobs:
         run: |
           VERSION=${{ steps.version.outputs.version }}
           cat > /tmp/release-notes.md << 'EOF'
-          ## Hefesto $VERSION
+## Hefesto $VERSION
 
-          TUI installer for OpenCode configuration.
+TUI installer for OpenCode configuration.
 
-          ### Installation
+### Installation
 
-          ```bash
-          brew install edcko/tap/hefesto
-          ```
+```bash
+brew install edcko/tap/hefesto
+```
 
-          ### Binaries
+### Binaries
 
-          | Platform | Architecture | Binary |
-          |----------|-------------|--------|
-          | macOS | ARM64 (M1/M2/M3) | `hefesto-darwin-arm64` |
-          | macOS | AMD64 (Intel) | `hefesto-darwin-amd64` |
-          | Linux | ARM64 | `hefesto-linux-arm64` |
-          | Linux | AMD64 | `hefesto-linux-amd64` |
+| Platform | Architecture | Binary |
+|----------|-------------|--------|
+| macOS | ARM64 (M1/M2/M3) | `hefesto-darwin-arm64` |
+| macOS | AMD64 (Intel) | `hefesto-darwin-amd64` |
+| Linux | ARM64 | `hefesto-linux-arm64` |
+| Linux | AMD64 | `hefesto-linux-amd64` |
 
-          ### Checksums
+### Checksums
 
-          See `checksums.txt` for SHA256 checksums.
-          EOF
+See `checksums.txt` for SHA256 checksums.
+EOF
           sed -i "s/\$VERSION/$VERSION/g" /tmp/release-notes.md
           cat /tmp/release-notes.md
 

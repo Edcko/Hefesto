@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	embedpkg "github.com/Edcko/Hefesto/cmd/hefesto/internal/embed"
 	"github.com/Edcko/Hefesto/cmd/hefesto/internal/logger"
 )
 
@@ -324,8 +326,8 @@ func checkSkills() CheckResult {
 
 	result.Details = append(result.Details, fmt.Sprintf("%d skills found", skillCount))
 
-	// Expected skill count (25 based on the embed, excluding _shared which is not a skill)
-	expectedCount := 25
+	// Count expected skills dynamically from the embedded filesystem
+	expectedCount := countEmbeddedSkills()
 	if skillCount < expectedCount {
 		result.Warnings = append(result.Warnings, fmt.Sprintf("Expected %d skills, found %d", expectedCount, skillCount))
 	}
@@ -832,6 +834,25 @@ func buildFixSuggestion(checkName string) string {
 	default:
 		return "Run `hefesto install` to fix this issue"
 	}
+}
+
+// countEmbeddedSkills counts the number of skill directories in the embedded
+// filesystem (excluding _shared and dot-prefixed entries). This ensures the
+// doctor always compares against the actual embedded skill count rather than
+// a hardcoded value that would drift when skills are added or removed.
+func countEmbeddedSkills() int {
+	entries, err := fs.ReadDir(embedpkg.ConfigFiles, "config/skills")
+	if err != nil {
+		logger.Debug("doctor: failed to read embedded skills directory: %v", err)
+		return 0
+	}
+	count := 0
+	for _, e := range entries {
+		if e.IsDir() && !strings.HasPrefix(e.Name(), ".") && e.Name() != "_shared" {
+			count++
+		}
+	}
+	return count
 }
 
 // Helper functions
