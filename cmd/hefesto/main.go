@@ -18,12 +18,25 @@ var (
 	date    = "unknown"
 )
 
+// doctorExitError carries the exit code from the doctor command
+// without calling os.Exit, so deferred cleanup runs normally.
+type doctorExitError struct {
+	code int
+}
+
+func (e *doctorExitError) Error() string {
+	return fmt.Sprintf("doctor exit code: %d", e.code)
+}
+
 func main() {
-	// Initialize logger before anything else.
-	logger.Init(verbose)
+	// Logger init is handled in rootCmd.PersistentPreRunE (after flag parsing).
 	defer logger.Close()
 
 	if err := rootCmd.Execute(); err != nil {
+		// If it's a doctor exit, respect its exit code for the process.
+		if docErr, ok := err.(*doctorExitError); ok {
+			os.Exit(docErr.code)
+		}
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -37,7 +50,12 @@ OpenCode configuration files to your system.
 
 It includes skills, themes, commands, and personality configurations
 for an enhanced AI-assisted development experience.`,
-	SilenceUsage: true,
+	SilenceUsage:  true,
+	SilenceErrors: true,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		logger.Init(verbose)
+		return nil
+	},
 }
 
 var installCmd = &cobra.Command{
@@ -137,13 +155,14 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 
 var updateCmd = &cobra.Command{
 	Use:   "update",
-	Short: "Update Hefesto to the latest version",
-	Long: `Update Hefesto configuration files to the latest version.
+	Short: "Update Hefesto configuration to the latest version",
+	Long: `Update your OpenCode configuration to the latest version bundled with Hefesto.
 
-This will:
-- Pull the latest configuration files
-- Create a backup of current configurations
-- Apply the new configurations`,
+This creates a timestamped backup of your current configuration and overlays
+the latest embedded config files. Your customizations are preserved where possible.
+
+Note: This updates the configuration files, not the Hefesto binary itself.
+Use 'brew upgrade hefesto' to update the binary.`,
 	RunE: runUpdate,
 }
 
@@ -203,15 +222,12 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 	result, exitCode := install.RunDoctor()
 	if doctorJSON {
 		if err := install.PrintDoctorJSON(result); err != nil {
-			os.Exit(1)
-			return nil
+			return &doctorExitError{code: 1}
 		}
-		os.Exit(exitCode)
-		return nil
+		return &doctorExitError{code: exitCode}
 	}
 	install.PrintDoctor(result)
-	os.Exit(exitCode)
-	return nil
+	return &doctorExitError{code: exitCode}
 }
 
 var rollbackCmd = &cobra.Command{
