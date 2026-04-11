@@ -7,28 +7,28 @@
 class Hefesto < Formula
   desc "TUI installer for OpenCode configuration"
   homepage "https://github.com/Edcko/Hefesto"
-  version "0.1.0" # Updated automatically by CI/CD
+  version "1.0.0" # Updated automatically by CI/CD
   license "MIT"
 
   on_macos do
     on_arm do
       url "https://github.com/Edcko/Hefesto/releases/download/v#{version}/hefesto-darwin-arm64"
-      sha256 "483883bcabefa2d9e11efd14f481dec88533b3118a6332148038aa9b824a0b27"
+      sha256 "2e8a6ce9a40767e7af1c2df3a48cbb2154d314e73289281528a75477244120c2"
     end
     on_intel do
       url "https://github.com/Edcko/Hefesto/releases/download/v#{version}/hefesto-darwin-amd64"
-      sha256 "1cc8dff8b5359feb85d6430b8c80665b06a4326f96eac4c15657d370acd9a350"
+      sha256 "1af6bec8a07ac693d8c7aaff96b7e6758906d06d797a95694f88fc64c14d31b8"
     end
   end
 
   on_linux do
     on_arm do
       url "https://github.com/Edcko/Hefesto/releases/download/v#{version}/hefesto-linux-arm64"
-      sha256 "a8718afdb32027ef9065eaf157b828705fda9fef8a0267e83d6240d2f10c1542"
+      sha256 "3c358c4fcab1b4ad8f01f17afe73a6c97cefb689deae578e4156bbfed9af30fe"
     end
     on_intel do
       url "https://github.com/Edcko/Hefesto/releases/download/v#{version}/hefesto-linux-amd64"
-      sha256 "b750fd0c908e34a6f117de9e665b3947623f8305bc2dad910ebec891bbb0bf7f"
+      sha256 "1f2a596802e401f41bbb313d97082497250a3cb9b2e5a2c6e91af6a87f6fe224"
     end
   end
 
