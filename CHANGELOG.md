@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-04-11
+
 ### Added
 - CI pipeline with GitHub Actions for build, test, and release
 - Structured logging throughout the CLI
@@ -47,5 +49,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Add steps limit to all SDD sub-agents to prevent infinite loop freezes
 - Use absolute paths for `AGENTS.md` skill references
 
-[Unreleased]: https://github.com/gentlemanprogramming/Hefesto/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/gentlemanprogramming/Hefesto/releases/tag/v0.1.0
+[Unreleased]: https://github.com/Edcko/Hefesto/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/Edcko/Hefesto/compare/v0.1.0...v1.0.0
+[0.1.0]: https://github.com/Edcko/Hefesto/releases/tag/v0.1.0
