@@ -49,8 +49,9 @@ func main() {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "hefesto",
-	Short: "Hefesto - Configuration installer for OpenCode",
+	Use:     "hefesto",
+	Short:   "Hefesto - Configuration installer for OpenCode",
+	Version: version,
 	Long: `Hefesto is a TUI-based installer that embeds and deploys
 OpenCode configuration files to your system.
 
