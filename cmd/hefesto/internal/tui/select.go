@@ -229,89 +229,80 @@ func (m *SelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View implements tea.Model.
 func (m *SelectModel) View() string {
-	boxWidth := 50
+	// Adapt to terminal width like welcome.go does.
+	termWidth := m.width
+	if termWidth == 0 {
+		termWidth = 60
+	}
 
-	var b strings.Builder
+	// Inner content width that lipgloss border+padding will render inside.
+	// lipgloss DoubleBorder adds 2 chars per side, Padding(0,1) adds 1 per side = 6 total.
+	// So a Width(w) on the style means the inner text area is w chars wide.
+	boxInnerWidth := 46
+	if termWidth < boxInnerWidth+8 {
+		boxInnerWidth = termWidth - 8
+	}
+	if boxInnerWidth < 20 {
+		boxInnerWidth = 20
+	}
 
-	// Top border
-	b.WriteString("╭")
-	b.WriteString(strings.Repeat("─", boxWidth))
-	b.WriteString("╮\n")
+	// Styles
+	borderStyle := lipgloss.NewStyle().
+		Border(lipgloss.DoubleBorder()).
+		BorderForeground(ColorCopper).
+		Padding(0, 1)
+
+	titleStyle := lipgloss.NewStyle().
+		Foreground(ColorAmber).
+		Bold(true)
+
+	mutedStyle := lipgloss.NewStyle().
+		Foreground(ColorGray)
+
+	// Build content lines
+	var lines []string
 
 	// Title
-	title := "  \U0001F6E0  Select Components to Install"
-	titleLine := fmt.Sprintf("│%s", title)
-	padding := boxWidth - len(title) + 1
-	if padding > 0 {
-		titleLine += strings.Repeat(" ", padding)
-	}
-	titleLine += "│\n"
-	b.WriteString(lipgloss.NewStyle().Foreground(Primary).Bold(true).Render(titleLine))
+	lines = append(lines, titleStyle.Render("Select Components to Install"))
+	lines = append(lines, "")
 
-	// Empty line
-	b.WriteString("│")
-	b.WriteString(strings.Repeat(" ", boxWidth))
-	b.WriteString("│\n")
-
-	// Key hints
-	hints := "  \u2191/k  Navigate    Space/Enter  Toggle"
-	hintLine := fmt.Sprintf("│%s", hints)
-	padding = boxWidth - len(hints) + 1
-	if padding > 0 {
-		hintLine += strings.Repeat(" ", padding)
-	}
-	hintLine += "│\n"
-	b.WriteString(lipgloss.NewStyle().Foreground(TextMuted).Render(hintLine))
-
-	hints2 := "  a    Toggle all   q  Quit"
-	hintLine2 := fmt.Sprintf("│%s", hints2)
-	padding = boxWidth - len(hints2) + 1
-	if padding > 0 {
-		hintLine2 += strings.Repeat(" ", padding)
-	}
-	hintLine2 += "│\n"
-	b.WriteString(lipgloss.NewStyle().Foreground(TextMuted).Render(hintLine2))
-
-	// Empty line
-	b.WriteString("│")
-	b.WriteString(strings.Repeat(" ", boxWidth))
-	b.WriteString("│\n")
+	// Key hints — split into two short lines that fit inside boxInnerWidth
+	lines = append(lines, mutedStyle.Render("up/k Navigate  Space/Enter Toggle"))
+	lines = append(lines, mutedStyle.Render("a   Toggle all  q  Quit"))
+	lines = append(lines, "")
 
 	// Component items
 	for i, item := range m.items.Items {
-		b.WriteString(m.renderItemLine(i, item, boxWidth))
+		lines = append(lines, m.renderItemLine(i, item, boxInnerWidth))
 	}
 
-	// Empty line
-	b.WriteString("│")
-	b.WriteString(strings.Repeat(" ", boxWidth))
-	b.WriteString("│\n")
+	lines = append(lines, "")
 
 	// Continue action
 	continueText := "[Enter] Continue with selection"
-	continueLine := fmt.Sprintf("│  %s", continueText)
-	padding = boxWidth - len(continueText) - 1
-	if padding > 0 {
-		continueLine += strings.Repeat(" ", padding)
-	}
-	continueLine += "│\n"
-
 	if m.continueRow {
-		b.WriteString(lipgloss.NewStyle().Foreground(Primary).Bold(true).Render(continueLine))
+		lines = append(lines, lipgloss.NewStyle().Foreground(ColorAmber).Bold(true).Render(continueText))
 	} else {
-		b.WriteString(lipgloss.NewStyle().Foreground(TextMuted).Render(continueLine))
+		lines = append(lines, mutedStyle.Render(continueText))
 	}
 
-	// Bottom border
-	b.WriteString("╰")
-	b.WriteString(strings.Repeat("─", boxWidth))
-	b.WriteString("╯\n")
+	// Render inside bordered box
+	content := strings.Join(lines, "\n")
+	box := borderStyle.
+		Width(boxInnerWidth).
+		Render(content)
 
-	return CenterText(b.String(), 60)
+	// Center in terminal
+	return lipgloss.NewStyle().
+		Width(termWidth).
+		Height(m.height).
+		Align(lipgloss.Center, lipgloss.Center).
+		Render(box)
 }
 
 // renderItemLine renders a single component item line with checkbox.
-func (m *SelectModel) renderItemLine(index int, item ComponentItem, boxWidth int) string {
+// innerWidth is the available content width inside the box.
+func (m *SelectModel) renderItemLine(index int, item ComponentItem, innerWidth int) string {
 	isActive := !m.continueRow && m.cursor == index
 
 	var checkbox string
@@ -319,18 +310,6 @@ func (m *SelectModel) renderItemLine(index int, item ComponentItem, boxWidth int
 		checkbox = "✅"
 	} else {
 		checkbox = "⬜"
-	}
-
-	// Build the display text
-	displayName := item.Name
-	desc := item.Description
-
-	var lineText string
-	if item.Required {
-		// Required items: show with a lock indicator and description
-		lineText = fmt.Sprintf("  %s %s (%s)", checkbox, displayName, desc)
-	} else {
-		lineText = fmt.Sprintf("  %s %s (%s)", checkbox, displayName, desc)
 	}
 
 	// Cursor indicator
@@ -341,25 +320,43 @@ func (m *SelectModel) renderItemLine(index int, item ComponentItem, boxWidth int
 		cursor = " "
 	}
 
-	fullLine := fmt.Sprintf("│%s%s", cursor, lineText)
+	// Build display text: "✅ Name (description)"
+	displayText := fmt.Sprintf("%s %s (%s)", checkbox, item.Name, item.Description)
 
-	// Calculate padding
-	plainLen := len(cursor) + len(lineText)
-	pad := boxWidth - plainLen + 1
-	if pad > 0 {
-		fullLine += strings.Repeat(" ", pad)
+	// Truncate if wider than available space (cursor + space + displayText)
+	maxDisplayWidth := innerWidth - lipgloss.Width(cursor) - 1 // -1 for space after cursor
+	if lipgloss.Width(displayText) > maxDisplayWidth {
+		displayText = truncateVisual(displayText, maxDisplayWidth)
 	}
-	fullLine += "│\n"
 
-	// Apply styling based on active state and required status
+	line := cursor + " " + displayText
+
+	// Apply styling
 	if isActive {
-		fullLine = lipgloss.NewStyle().Foreground(Primary).Render(fullLine)
-	} else if item.Required {
-		// Required items shown slightly differently - still styled but dimmer
-		fullLine = lipgloss.NewStyle().Foreground(TextMuted).Render(fullLine)
+		return lipgloss.NewStyle().Foreground(ColorAmber).Bold(true).Render(line)
 	}
+	if item.Required {
+		return lipgloss.NewStyle().Foreground(ColorGray).Render(line)
+	}
+	return lipgloss.NewStyle().Foreground(ColorWhite).Render(line)
+}
 
-	return fullLine
+// truncateVisual truncates a string to fit within maxWidth terminal columns,
+// appending "…" if truncation was needed.
+func truncateVisual(s string, maxWidth int) string {
+	if lipgloss.Width(s) <= maxWidth {
+		return s
+	}
+	// Remove characters from the end until it fits
+	runes := []rune(s)
+	for len(runes) > 0 {
+		test := string(runes) + "…"
+		if lipgloss.Width(test) <= maxWidth {
+			return test
+		}
+		runes = runes[:len(runes)-1]
+	}
+	return "…"
 }
 
 // selectCompleteMsg signals that the user confirmed their component selection.
