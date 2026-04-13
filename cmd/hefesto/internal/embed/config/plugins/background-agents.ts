@@ -679,7 +679,7 @@ Use \`delegation_read(id)\` to retrieve the full result. Results are persisted t
       agent: tool.schema
         .string()
         .describe(
-          'Agent to delegate to: "explore" (codebase search), "researcher" (external research), "scribe" (docs/commits), or "general".',
+          'Agent to delegate to. Available agents: "sdd-init", "sdd-plan", "sdd-spec", "sdd-tasks", "sdd-apply", "sdd-verify", "remote-exec", or "general" for generic tasks.',
         ),
     },
     async execute(args: DelegateArgs, toolCtx: ToolContext): Promise<string> {
