@@ -41,7 +41,7 @@
       }
     },
     "sdd-orchestrator": {
-      "description": "SDD coordinator — coordinates sub-agents, never does work inline",
+      "description": "SDD coordinator — MUST ALWAYS delegate ALL work to sub-agents. NEVER reads source code, NEVER writes code, NEVER does analysis inline. Only coordinates, asks questions, and shows summaries.",
       "mode": "all",
       "steps": 100,
       "permission": {
