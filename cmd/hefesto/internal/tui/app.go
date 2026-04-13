@@ -17,6 +17,7 @@ type Screen int
 const (
 	ScreenWelcome Screen = iota
 	ScreenDetect
+	ScreenComponentSelect
 	ScreenBackup
 	ScreenInstall
 	ScreenComplete
@@ -25,7 +26,7 @@ const (
 
 // String returns the screen name
 func (s Screen) String() string {
-	return [...]string{"welcome", "detect", "backup", "install", "complete", "error"}[s]
+	return [...]string{"welcome", "detect", "component-select", "backup", "install", "complete", "error"}[s]
 }
 
 // InstallError wraps an error with context for the error screen
@@ -53,16 +54,18 @@ type App struct {
 	height int
 
 	// Shared state between screens
-	configPath        string
-	backupPath        string
-	openCodeVersion   string
-	openCodeInstalled bool
-	existingConfig    bool
-	isGentlemanDots   bool
+	configPath         string
+	backupPath         string
+	openCodeVersion    string
+	openCodeInstalled  bool
+	existingConfig     bool
+	isGentlemanDots    bool
+	componentSelection *ComponentSelection
 
 	// Current screen models
 	welcome  *WelcomeModel
 	detect   *DetectModel
+	select_  *SelectModel
 	backup   *BackupModel
 	install  *InstallModel
 	complete *CompleteModel
@@ -126,6 +129,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m, _ := a.detect.Update(msg)
 			a.detect = m.(*DetectModel)
 		}
+		if a.select_ != nil {
+			m, _ := a.select_.Update(msg)
+			a.select_ = m.(*SelectModel)
+		}
 		if a.backup != nil {
 			m, _ := a.backup.Update(msg)
 			a.backup = m.(*BackupModel)
@@ -146,6 +153,17 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Screen transition messages
 	case ScreenTransitionMsg:
 		return a.handleScreenTransition(msg)
+
+	case selectCompleteMsg:
+		// Save the component selection
+		if a.select_ != nil {
+			a.componentSelection = a.select_.GetSelection()
+		}
+		// Decide next screen: backup if existing config, else install
+		if a.existingConfig {
+			return a.handleScreenTransition(ScreenTransitionMsg{Target: ScreenBackup})
+		}
+		return a.handleScreenTransition(ScreenTransitionMsg{Target: ScreenInstall})
 
 	case ErrorMsg:
 		// Snapshot install step tracking before transitioning to error screen
@@ -205,6 +223,13 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, cmd)
 		}
 
+	case ScreenComponentSelect:
+		if a.select_ != nil {
+			m, cmd := a.select_.Update(msg)
+			a.select_ = m.(*SelectModel)
+			cmds = append(cmds, cmd)
+		}
+
 	case ScreenBackup:
 		if a.backup != nil {
 			m, cmd := a.backup.Update(msg)
@@ -254,6 +279,10 @@ func (a *App) View() string {
 		if a.detect != nil {
 			content = a.detect.View()
 		}
+	case ScreenComponentSelect:
+		if a.select_ != nil {
+			content = a.select_.View()
+		}
 	case ScreenBackup:
 		if a.backup != nil {
 			content = a.backup.View()
@@ -288,7 +317,16 @@ func (a *App) handleScreenTransition(msg ScreenTransitionMsg) (tea.Model, tea.Cm
 		a.screen = ScreenDetect
 		return a, a.detect.Init()
 
+	case ScreenComponentSelect:
+		a.select_ = NewSelectModel(a.width, a.height)
+		a.screen = ScreenComponentSelect
+		return a, a.select_.Init()
+
 	case ScreenBackup:
+		// Save component selection before transitioning
+		if a.select_ != nil {
+			a.componentSelection = a.select_.GetSelection()
+		}
 		a.backup = NewBackupModel(
 			a.configPath,
 			a.existingConfig,
@@ -299,10 +337,16 @@ func (a *App) handleScreenTransition(msg ScreenTransitionMsg) (tea.Model, tea.Cm
 		return a, a.backup.Init()
 
 	case ScreenInstall:
+		// Pass component selection to install model
+		selection := a.componentSelection
+		if selection == nil {
+			selection = DefaultComponentSelection()
+		}
 		a.install = NewInstallModel(
 			a.configPath,
 			a.backupPath,
 			a.existingConfig,
+			selection,
 			a.width,
 			a.height,
 		)

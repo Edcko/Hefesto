@@ -58,6 +58,9 @@ type InstallModel struct {
 	backupPath     string
 	existingConfig bool
 
+	// Component selection — controls what gets installed
+	selection *ComponentSelection
+
 	// Installation steps
 	steps    []InstallStep
 	current  int
@@ -98,22 +101,46 @@ type InstallCompleteMsg struct {
 }
 
 // NewInstallModel creates a new install screen
-func NewInstallModel(configPath, backupPath string, existingConfig bool, width, height int) *InstallModel {
+func NewInstallModel(configPath, backupPath string, existingConfig bool, selection *ComponentSelection, width, height int) *InstallModel {
+	if selection == nil {
+		selection = DefaultComponentSelection()
+	}
+
+	// Build steps based on component selection
+	steps := []InstallStep{
+		{Name: "Detect environment", Status: StepPending},
+	}
+
+	if existingConfig {
+		steps = append(steps, InstallStep{Name: "Backup existing config", Status: StepPending})
+	}
+
+	if selection.IsSelected(ComponentSkills) || selection.IsSelected(ComponentTheme) ||
+		selection.IsSelected(ComponentPersonality) || selection.IsSelected(ComponentCommands) ||
+		selection.IsSelected(ComponentPlugins) || selection.IsSelected(ComponentAgents) ||
+		selection.IsSelected(ComponentOpenCode) {
+		steps = append(steps, InstallStep{Name: "Copying configuration", Status: StepPending})
+	}
+
+	if selection.IsSelected(ComponentEngram) {
+		steps = append(steps, InstallStep{Name: "Install Engram", Status: StepPending})
+	}
+
+	if selection.IsSelected(ComponentPlugins) {
+		steps = append(steps, InstallStep{Name: "Install dependencies", Status: StepPending})
+	}
+
+	steps = append(steps, InstallStep{Name: "Verify installation", Status: StepPending})
+
 	return &InstallModel{
 		configPath:     configPath,
 		backupPath:     backupPath,
 		existingConfig: existingConfig,
-		steps: []InstallStep{
-			{Name: "Detect environment", Status: StepPending},
-			{Name: "Backup existing config", Status: StepPending},
-			{Name: "Copying configuration", Status: StepPending},
-			{Name: "Install Engram", Status: StepPending},
-			{Name: "Install dependencies", Status: StepPending},
-			{Name: "Verify installation", Status: StepPending},
-		},
-		startTime:    time.Now(),
-		spinnerFrame: "⠋",
-		spinnerIndex: 0,
+		selection:      selection,
+		steps:          steps,
+		startTime:      time.Now(),
+		spinnerFrame:   "⠋",
+		spinnerIndex:   0,
 	}
 }
 
@@ -132,9 +159,10 @@ func (m *InstallModel) runStep(index int) tea.Cmd {
 
 		var message string
 
-		switch index {
-		case 0:
-			// Step 1: Detect environment
+		stepName := m.steps[index].Name
+
+		switch stepName {
+		case "Detect environment":
 			m.steps[index].StartTime = time.Now()
 			env, detectErr := install.Detect()
 			if detectErr != nil {
@@ -148,8 +176,7 @@ func (m *InstallModel) runStep(index int) tea.Cmd {
 			m.env = env
 			message = fmt.Sprintf("Detected %s/%s, OpenCode %s", env.Platform, env.Arch, env.OpenCodeVersion)
 
-		case 1:
-			// Step 2: Backup existing config if present
+		case "Backup existing config":
 			m.steps[index].StartTime = time.Now()
 			if m.env != nil && m.env.ConfigExists && m.env.ExistingConfig != "none" {
 				backupPath, backupErr := install.Backup(configPath)
@@ -164,8 +191,7 @@ func (m *InstallModel) runStep(index int) tea.Cmd {
 				message = "No existing config to backup"
 			}
 
-		case 2:
-			// Step 3: Copy Hefesto configuration from embedded files
+		case "Copying configuration":
 			m.steps[index].StartTime = time.Now()
 			if err := install.CopyConfig(embed.ConfigFiles, configPath); err != nil {
 				return StepCompleteMsg{
@@ -177,8 +203,7 @@ func (m *InstallModel) runStep(index int) tea.Cmd {
 			}
 			message = "Configuration copied successfully"
 
-		case 3:
-			// Step 4: Configure API provider (Engram)
+		case "Install Engram":
 			m.steps[index].StartTime = time.Now()
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
@@ -206,8 +231,7 @@ func (m *InstallModel) runStep(index int) tea.Cmd {
 				}
 			}
 
-		case 4:
-			// Step 5: Install dependencies (npm)
+		case "Install dependencies":
 			m.steps[index].StartTime = time.Now()
 			// npm install is non-fatal - continue even if it fails
 			if err := install.NpmInstall(configPath); err != nil {
@@ -217,8 +241,7 @@ func (m *InstallModel) runStep(index int) tea.Cmd {
 				message = "Dependencies installed successfully"
 			}
 
-		case 5:
-			// Step 6: Verify installation
+		case "Verify installation":
 			m.steps[index].StartTime = time.Now()
 			result, err := install.Verify(configPath)
 			if err != nil {
@@ -249,8 +272,8 @@ func (m *InstallModel) runStep(index int) tea.Cmd {
 			return StepCompleteMsg{
 				Index:   index,
 				Success: false,
-				Message: fmt.Sprintf("Unknown step index: %d", index),
-				Error:   fmt.Errorf("unknown step index: %d", index),
+				Message: fmt.Sprintf("Unknown step: %s", stepName),
+				Error:   fmt.Errorf("unknown step: %s", stepName),
 			}
 		}
 
@@ -413,7 +436,7 @@ func (m *InstallModel) renderStepLine(index int, step InstallStep, boxWidth int)
 	}
 
 	// Add progress bar for running steps (especially the copy step)
-	if step.Status == StepRunning && index == 2 {
+	if step.Status == StepRunning && step.Name == "Copying configuration" {
 		return m.renderStepWithProgress(index, step, boxWidth, icon, nameStyle)
 	}
 
@@ -505,25 +528,25 @@ func (m *InstallModel) getCurrentDetail() string {
 		return "Preparing next step..."
 	}
 
-	// Return step-specific detail
-	switch m.current {
-	case 0:
+	// Return step-specific detail based on name
+	switch step.Name {
+	case "Detect environment":
 		return "Detecting system environment..."
-	case 1:
+	case "Backup existing config":
 		if m.env != nil && m.env.ConfigExists {
 			return "Creating backup of existing configuration..."
 		}
 		return "No backup needed"
-	case 2:
+	case "Copying configuration":
 		if step.Detail != "" {
 			return fmt.Sprintf("Copying: %s", step.Detail)
 		}
 		return "Copying configuration files..."
-	case 3:
+	case "Install Engram":
 		return "Installing Engram for persistent memory..."
-	case 4:
+	case "Install dependencies":
 		return "Running npm install..."
-	case 5:
+	case "Verify installation":
 		return "Verifying installation integrity..."
 	default:
 		return "Processing..."

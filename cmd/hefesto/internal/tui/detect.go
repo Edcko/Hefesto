@@ -146,12 +146,8 @@ func (m *DetectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "enter", " ":
 			if !m.detecting {
-				// Check if we need backup screen
-				existingConfig := m.results[2].Found
-				if existingConfig {
-					return m, TransitionTo(ScreenBackup)
-				}
-				return m, TransitionTo(ScreenInstall)
+				// Always go to component selection after detection
+				return m, TransitionTo(ScreenComponentSelect)
 			}
 		}
 	}
