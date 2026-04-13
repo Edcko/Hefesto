@@ -1,7 +1,7 @@
 ---
 name: stream-deck
 description: >
-  Create slide-deck presentation webs for streams and courses using Hefesto Forge theme with inline SVG diagrams.
+  Create slide-deck presentation webs for streams and courses using Gentleman Kanagawa Blur theme with inline SVG diagrams.
   Trigger: When building a presentation, slide deck, course material, stream web, or talk slides.
 metadata:
   author: gentleman-programming
@@ -12,7 +12,7 @@ metadata:
 
 - Building a slide-deck web presentation for streams, talks, or courses
 - Creating inline SVG diagrams for dark-themed presentations
-- Setting up a Hefesto Forge themed web UI
+- Setting up a Kanagawa Blur themed web UI
 - Generating visual diagrams with high contrast on dark backgrounds
 
 ---
@@ -31,7 +31,7 @@ Single-page HTML presentation with:
 project/
 ├── index.html              # Single HTML file with all slides
 └── assets/
-    ├── css/styles.css      # Hefesto Forge theme + layout
+    ├── css/styles.css      # Kanagawa Blur theme + layout
     └── js/app.js           # Navigation, dots, mode switching
 ```
 
@@ -39,39 +39,39 @@ project/
 
 ## Critical Patterns
 
-### Pattern 1: Hefesto Forge Color Palette
+### Pattern 1: Gentleman Kanagawa Blur Color Palette
 
-ALWAYS use these exact colors. Source: `HefestoOpenCode/themes/hefesto.json`
+ALWAYS use these exact colors. Source: `gentleman-kanagawa-blur/lua/gentleman_kanagawa_blur/variant.lua`
 
 ```css
 :root {
-  /* Backgrounds - warm forge blacks */
-  --bg: #0a0a0f;
-  --bg-dark: #0a0a0f;
-  --black: #0a0a0f;
-  --gray0: #0d0d12;         /* Rail/viewport background */
-  --gray1: #12121a;         /* Card backgrounds, surface */
-  --gray2: #1a1a22;         /* Inner panels, surface2 */
-  --gray3: #22222a;         /* Deeper surface */
-  --line: #3D3529;          /* Borders, separators */
-  --line-strong: #6B6358;   /* Strong borders, visible dots */
-  --selection: #2a221a;     /* Active module highlight - amber tinted */
+  /* Backgrounds */
+  --bg: #06080f;
+  --bg-dark: #06080f;
+  --black: #06080f;
+  --gray0: #191e28;         /* Rail/viewport background */
+  --gray1: #1c212c;         /* Card backgrounds, surface */
+  --gray2: #232a36;         /* Inner panels, surface2 */
+  --gray3: #2a3142;         /* Deeper surface */
+  --line: #313342;          /* Borders, separators */
+  --line-strong: #8394A3;   /* Strong borders, visible dots */
+  --selection: #263356;     /* Active module highlight */
 
   /* Text - CONTRAST IS CRITICAL */
-  --fg: #F5F0E8;            /* Primary text — warm white, high contrast */
+  --fg: #f3f6f9;            /* Primary text — high contrast */
   --subtext1: #A1AABB;      /* Secondary text (paragraphs) — ~5.2:1 ratio */
-  --subtext: #8B8175;       /* Tertiary text (eyebrow, hints) — ~4.2:1 ratio */
+  --subtext: #8394A3;       /* Tertiary text (eyebrow, hints) — ~4.2:1 ratio */
 
-  /* Accent colors - forge palette */
-  --red: #C4453A;
-  --green: #4ADE80;
-  --yellow: #E8A84C;        /* Golden/info color */
-  --purple: #C17F59;        /* Copper/secondary */
-  --magenta: #E87040;       /* Warm orange-red */
-  --orange: #E8850C;        /* Primary amber */
-  --blue: #4ADE80;          /* Reuse green for cool accent */
-  --cyan: #DEBA87;          /* Warning/golden */
-  --accent: #E8850C;        /* Mode badge, counter, kicker - primary amber */
+  /* Accent colors */
+  --red: #cb7c94;
+  --green: #b7cc85;
+  --yellow: #dfbd76;        /* NOT #FFE066 — use the golden string color */
+  --purple: #a3b5d6;
+  --magenta: #ff8dd7;
+  --orange: #deba87;
+  --blue: #7fb4ca;
+  --cyan: #7aa89f;
+  --accent: #e0c15a;        /* Mode badge, counter, kicker */
 }
 ```
 
@@ -79,19 +79,19 @@ ALWAYS use these exact colors. Source: `HefestoOpenCode/themes/hefesto.json`
 
 | Use Case | WRONG Color | CORRECT Color | Why |
 |----------|-------------|---------------|-----|
-| Muted text on dark bg | `#3D3529` | `#8B8175` | 3D has ~1.5:1 ratio — INVISIBLE |
-| Secondary text | `#6B6358` | `#A1AABB` | 6B is textMuted, too dark for secondary |
-| Yellow/gold | `#FFE066` | `#E8A84C` | FFE is neon, E8A8 matches forge theme |
-| Dot borders | `#3D3529` | `#6B6358` | 3D disappears on dark backgrounds |
+| Muted text on dark bg | `#5c6170` | `#8394A3` | 5c has ~1.5:1 ratio — INVISIBLE |
+| Secondary text | `#8a8fa3` | `#A1AABB` | 8a is borderline ~2.8:1 |
+| Yellow/gold | `#FFE066` | `#DFBD76` | FFE is neon, DFBD matches IDE theme |
+| Dot borders | `#313342` | `#8394A3` | 31 disappears on dark backgrounds |
 
-**Minimum contrast ratio: 4:1 against `#12121a` surface backgrounds.**
+**Minimum contrast ratio: 4:1 against `#1c212c` surface backgrounds.**
 
 ### Pattern 2: Slide HTML Structure
 
 Each slide is a two-column grid with text left, diagram right:
 
 ```html
-<article class="slide" data-index="0" data-module="0" data-tone="orange">
+<article class="slide" data-index="0" data-module="0" data-tone="blue">
   <div class="slide-content">
     <p class="slide-kicker">01 · MODULE NAME</p>
     <h2>Slide Title</h2>
@@ -110,7 +110,7 @@ Each slide is a two-column grid with text left, diagram right:
 **Key attributes:**
 - `data-index` — global slide number (0-based)
 - `data-module` — which module group (maps to rail sidebar)
-- `data-tone` — color accent for that slide (orange, green, red, etc.)
+- `data-tone` — color accent for that slide (blue, green, red, etc.)
 
 ### Pattern 3: Module/Rail System
 
@@ -130,11 +130,11 @@ The `modeMap` in JS maps module indices to vim modes:
 
 ```js
 const modeMap = {
-  0: "normal",   // orange/amber
+  0: "normal",   // blue
   1: "command",  // accent/gold
   2: "insert",   // green
   3: "visual",   // magenta
-  4: "replace",  // red
+  4: "replace",  // orange
   5: "terminal", // cyan
   6: "normal",   // cycles back
   7: "command",
@@ -149,7 +149,7 @@ const modeMap = {
 
 ```
 viewBox="0 0 520 360"
-Background: transparent (parent container provides #0a0a0f via CSS)
+Background: transparent (parent container provides #06080f via CSS)
 Font: Space Grotesk,sans-serif for ALL text
 ```
 
@@ -158,12 +158,12 @@ Font: Space Grotesk,sans-serif for ALL text
 | Element | Style |
 |---------|-------|
 | Section headers | `font-size="10" letter-spacing="2" fill="#A1AABB"` uppercase |
-| Titles | `font-size="15-18" font-weight="600" fill="#F5F0E8"` |
-| Card backgrounds | `fill="#12121a" stroke="#3D3529"` rounded `rx="8-14"` |
-| Inner panels | `fill="#1A1A22"` |
+| Titles | `font-size="15-18" font-weight="600" fill="#F3F6F9"` |
+| Card backgrounds | `fill="#1c212c" stroke="#313342"` rounded `rx="8-14"` |
+| Inner panels | `fill="#232A36"` |
 | Subtitle/labels | `fill="#A1AABB"` |
-| Muted/decorative | `fill="#8B8175"` |
-| Borders | `stroke="#3D3529"` |
+| Muted/decorative | `fill="#8394A3"` |
+| Borders | `stroke="#313342"` |
 | Glows | `feGaussianBlur` filters with accent color, opacity 0.2-0.3 |
 
 **Filter ID rule:** prefix ALL filter IDs with `s{slideIndex}-` to avoid conflicts:
@@ -191,7 +191,7 @@ Then use `mcp_edit` to replace `<img>` tags with the returned SVG.
 Need a new presentation?
   → Scaffold HTML with topbar, rail, viewport, controls
   → Define modules and slide count
-  → Create CSS with full Hefesto Forge palette
+  → Create CSS with full Kanagawa Blur palette
   → Create JS with navigation + buildDots()
 
 Adding slides to existing deck?
@@ -225,7 +225,7 @@ Fixing contrast issues?
       <defs>
         <filter id="s5-glow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="4" result="blur"/>
-          <feFlood flood-color="#E8A84C" flood-opacity="0.25"/>
+          <feFlood flood-color="#DFBD76" flood-opacity="0.25"/>
           <feComposite in2="blur" operator="in"/>
           <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
@@ -233,7 +233,7 @@ Fixing contrast issues?
       <text x="260" y="30" text-anchor="middle" font-size="10"
             letter-spacing="2" fill="#A1AABB">CONTEXTO</text>
       <rect x="60" y="50" width="400" height="260" rx="12"
-            fill="#12121a" stroke="#3D3529" stroke-width="1"/>
+            fill="#1c212c" stroke="#313342" stroke-width="1"/>
       <!-- ... diagram content ... -->
     </svg>
   </figure>
@@ -278,12 +278,12 @@ You are an SVG diagram generator. Generate a SINGLE inline SVG.
 - Section headers: font-size="10" letter-spacing="2" fill="#A1AABB" uppercase
 - Filter IDs MUST be prefixed with `s{N}-`
 
-## COLOR PALETTE (Hefesto Forge)
-- fg: #F5F0E8, subtext: #A1AABB, muted: #8B8175
-- surface: #12121a, surface2: #1A1A22, line: #3D3529
-- orange: #E8850C, green: #4ADE80, yellow: #E8A84C
-- red: #C4453A, copper: #C17F59, magenta: #E87040
-- cyan: #DEBA87, accent: #E8850C
+## COLOR PALETTE
+- fg: #F3F6F9, subtext: #A1AABB, muted: #8394A3
+- surface: #1c212c, surface2: #232A36, line: #313342
+- blue: #7FB4CA, green: #B7CC85, yellow: #DFBD76
+- red: #CB7C94, purple: #A3B5D6, magenta: #FF8DD7
+- orange: #DEBA87, cyan: #7AA89F, accent: #E0C15A
 
 ## SLIDE CONTENT
 Title: "{title}"
@@ -310,7 +310,7 @@ rg 'assets/images/' index.html || echo "ALL INLINE"
 rg -c '<svg' index.html
 
 # Check for bad contrast colors (should return nothing)
-rg '#FFE066|#3D3529(?!.*stroke)' index.html || echo "CLEAN"
+rg '#FFE066|#5c6170|#8a8fa3' index.html || echo "CLEAN"
 
 # Audit all fill colors used
 rg -o 'fill="#[0-9a-fA-F]{6}"' index.html | sort | uniq -c | sort -rn
@@ -339,7 +339,7 @@ The visual depth comes from layered effects, NOT gradients:
   border-radius: 999px;
   filter: blur(120px);
   opacity: 0.18;
-  background: var(--orange);           /* forge glow */
+  background: var(--magenta);          /* or --blue */
 }
 ```
 
@@ -429,5 +429,5 @@ Use a sub-agent (Task tool) for re-indexing — it's tedious but critical for na
 
 ## Resources
 
-- **Color source**: `HefestoOpenCode/themes/hefesto.json`
+- **Color source**: `gentleman-kanagawa-blur/lua/gentleman_kanagawa_blur/variant.lua`
 - **Reference implementation**: See [assets/](assets/) for HTML scaffold template
