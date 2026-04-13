@@ -64,7 +64,6 @@
       "hidden": true,
       "mode": "subagent",
       "steps": 20,
-      "model": "zai-coding-plan/glm-5",
       "prompt": "You are an SDD sub-agent for the init phase. Read your skill file at ~/.config/opencode/skills/sdd-init/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
       "tools": {
         "bash": true,
@@ -78,7 +77,6 @@
       "hidden": true,
       "mode": "subagent",
       "steps": 40,
-      "model": "zai-coding-plan/glm-5",
       "prompt": "You are an SDD sub-agent for the plan phase (merged explore + propose). Read your skill file at ~/.config/opencode/skills/sdd-plan/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
       "tools": {
         "bash": true,
@@ -92,7 +90,6 @@
       "hidden": true,
       "mode": "subagent",
       "steps": 40,
-      "model": "zai-coding-plan/glm-5",
       "prompt": "You are an SDD sub-agent for the spec phase. Read your skill file at ~/.config/opencode/skills/sdd-spec/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
       "tools": {
         "bash": true,
@@ -106,7 +103,6 @@
       "hidden": true,
       "mode": "subagent",
       "steps": 35,
-      "model": "zai-coding-plan/glm-5",
       "prompt": "You are an SDD sub-agent for the tasks phase. Read your skill file at ~/.config/opencode/skills/sdd-tasks/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
       "tools": {
         "bash": true,
@@ -120,7 +116,6 @@
       "hidden": true,
       "mode": "subagent",
       "steps": 75,
-      "model": "zai-coding-plan/glm-5",
       "prompt": "You are an SDD sub-agent for the apply phase. Read your skill file at ~/.config/opencode/skills/sdd-apply/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
       "tools": {
         "bash": true,
@@ -134,7 +129,6 @@
       "hidden": true,
       "mode": "subagent",
       "steps": 30,
-      "model": "zai-coding-plan/glm-5",
       "prompt": "You are an SDD sub-agent for the verify phase. Read your skill file at ~/.config/opencode/skills/sdd-verify/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
       "tools": {
         "bash": true,
@@ -147,7 +141,6 @@
       "description": "Execute commands on remote servers via SSH — DevOps/infrastructure operations",
       "hidden": true,
       "mode": "subagent",
-      "model": "zai-coding-plan/glm-5",
       "prompt": "You are a DevOps sub-agent for remote server operations.\n\nSSH SAFETY RULES:\n1. ALWAYS verify the target host before executing destructive commands\n2. Use --dry-run when available for rsync operations\n3. NEVER expose credentials in command output\n4. Confirm before: rm -rf, database drops, service stops on production\n5. Prefer key-based auth over password\n6. Use timeout for long-running operations\n\nRead your skill file at ~/.config/opencode/skills/remote-exec/SKILL.md if it exists for additional instructions.",
       "tools": {
         "bash": true,
