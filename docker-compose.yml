@@ -1,7 +1,8 @@
 # Hefesto OpenCode Testing Environment
-# Docker Compose configuration for isolated testing
+# Docker Compose configuration for multi-distro E2E testing
 
 services:
+  # ─── Ubuntu (original test environment) ──────────────────────────────
   hefesto-test:
     build:
       context: .
@@ -12,11 +13,69 @@ services:
       - ./test-workspace:/workspace
     stdin_open: true
     tty: true
-    # Environment variables for testing
     environment:
       - TERM=xterm-256color
       - NO_COLOR=0
-    # Resource limits (optional)
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+  # ─── Debian ──────────────────────────────────────────────────────────
+  hefesto-debian:
+    build:
+      context: .
+      dockerfile: Dockerfile.debian
+    container_name: hefesto-debian
+    volumes:
+      - ./test-workspace-debian:/workspace
+    stdin_open: true
+    tty: true
+    environment:
+      - TERM=xterm-256color
+      - NO_COLOR=0
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+  # ─── Fedora ──────────────────────────────────────────────────────────
+  hefesto-fedora:
+    build:
+      context: .
+      dockerfile: Dockerfile.fedora
+    container_name: hefesto-fedora
+    volumes:
+      - ./test-workspace-fedora:/workspace
+    stdin_open: true
+    tty: true
+    environment:
+      - TERM=xterm-256color
+      - NO_COLOR=0
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+  # ─── Alpine ──────────────────────────────────────────────────────────
+  hefesto-alpine:
+    build:
+      context: .
+      dockerfile: Dockerfile.alpine
+    container_name: hefesto-alpine
+    volumes:
+      - ./test-workspace-alpine:/workspace
+    stdin_open: true
+    tty: true
+    environment:
+      - TERM=xterm-256color
+      - NO_COLOR=0
     deploy:
       resources:
         limits:

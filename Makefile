@@ -8,7 +8,7 @@ DIST_DIR=dist
 PWD=$(shell pwd)
 
 # Platform targets: GOOS/GOARCH
-TARGETS=darwin-arm64 darwin-amd64 linux-arm64 linux-amd64
+TARGETS=darwin-arm64 darwin-amd64 linux-arm64 linux-amd64 android-arm64
 
 # Build flags
 LDFLAGS=-s -w -X main.version=$(VERSION)
@@ -71,6 +71,7 @@ release: sha256sum
 	@echo "| macOS | AMD64 (Intel) | \`hefesto-darwin-amd64\` |" >> /tmp/release-notes.md
 	@echo "| Linux | ARM64 | \`hefesto-linux-arm64\` |" >> /tmp/release-notes.md
 	@echo "| Linux | AMD64 | \`hefesto-linux-amd64\` |" >> /tmp/release-notes.md
+	@echo "| Android | ARM64 | \`hefesto-android-arm64\` |" >> /tmp/release-notes.md
 	@echo "" >> /tmp/release-notes.md
 	@echo "### Checksums" >> /tmp/release-notes.md
 	@echo "" >> /tmp/release-notes.md
@@ -82,6 +83,7 @@ release: sha256sum
 		$(DIST_DIR)/$(BINARY)-darwin-amd64 \
 		$(DIST_DIR)/$(BINARY)-linux-arm64 \
 		$(DIST_DIR)/$(BINARY)-linux-amd64 \
+		$(DIST_DIR)/$(BINARY)-android-arm64 \
 		checksums.txt
 	@rm /tmp/release-notes.md
 	@echo "✅ Release $(VERSION) created successfully!"

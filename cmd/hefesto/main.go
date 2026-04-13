@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -83,6 +84,7 @@ var (
 	verbose        bool // global --verbose flag
 	installYes     bool
 	installDryRun  bool
+	installTest    bool
 	rollbackYes    bool
 	rollbackList   bool
 	uninstallYes   bool
@@ -96,15 +98,25 @@ var (
 )
 
 func runInstall(cmd *cobra.Command, args []string) error {
+	// --dry-run: print summary of what would be installed, no changes made
 	if installDryRun {
-		fmt.Println("🔍 Dry run mode - no changes will be made")
-		fmt.Println()
-		// Run the installer in dry-run mode
-		installer := install.NewInstaller(true)
-		return runInstallerWithProgress(installer)
+		return runDryRun()
 	}
 
-	if installYes {
+	// --test mode: install into a temp directory
+	if installTest {
+		tmpDir, err := os.MkdirTemp("", "hefesto-test-*")
+		if err != nil {
+			return fmt.Errorf("failed to create temp directory: %w", err)
+		}
+		if err := os.Setenv("HOME", tmpDir); err != nil {
+			return fmt.Errorf("failed to set HOME: %w", err)
+		}
+		fmt.Fprintf(os.Stderr, "🧪 Test mode: installing to %s\n", tmpDir)
+		defer fmt.Fprintf(os.Stderr, "🧪 Test install complete. Files at: %s\n", tmpDir)
+	}
+
+	if installYes || installTest {
 		fmt.Println("🚀 Non-interactive installation mode")
 		fmt.Println()
 		installer := install.NewInstaller(false)
@@ -146,6 +158,220 @@ func runInstallerWithProgress(installer *install.Installer) error {
 	fmt.Println("🎉 Hefesto configuration installed successfully!")
 	fmt.Println()
 	return nil
+}
+
+// dryRunFileInfo holds metadata about a file that would be installed.
+type dryRunFileInfo struct {
+	name string
+	size int64
+}
+
+// dryRunCategory groups files by category for display.
+type dryRunCategory struct {
+	label string
+	icon  string
+	items []dryRunFileInfo
+}
+
+// runDryRun prints a detailed summary of what would be installed without making changes.
+func runDryRun() error {
+	// Detect environment to get the config path
+	env, err := install.Detect()
+	if err != nil {
+		return fmt.Errorf("failed to detect environment: %w", err)
+	}
+
+	// Resolve config path for display
+	configDisplayPath := formatPathRel(env.ConfigPath)
+
+	// Walk the embedded filesystem to collect file info
+	configFS, err := fs.Sub(embedpkg.ConfigFiles, "config")
+	if err != nil {
+		return fmt.Errorf("failed to access embedded config: %w", err)
+	}
+
+	var categories []dryRunCategory
+	var totalSize int64
+
+	// Collect root config files (AGENTS.md, opencode.json, etc.)
+	var rootFiles []dryRunFileInfo
+	rootEntries, _ := fs.ReadDir(configFS, ".")
+	if rootEntries != nil {
+		for _, entry := range rootEntries {
+			if entry.IsDir() {
+				continue
+			}
+			info, err := entry.Info()
+			if err != nil {
+				continue
+			}
+			rootFiles = append(rootFiles, dryRunFileInfo{name: entry.Name(), size: info.Size()})
+			totalSize += info.Size()
+		}
+		sort.Slice(rootFiles, func(i, j int) bool { return rootFiles[i].name < rootFiles[j].name })
+	}
+
+	// Collect skills
+	skillsCat := collectCategory(configFS, "skills", true)
+	totalSize += skillsCat.totalSize
+	categories = append(categories, dryRunCategory{
+		label: fmt.Sprintf("%d skills (skills/)", len(skillsCat.items)),
+		icon:  "✅",
+		items: skillsCat.items,
+	})
+
+	// Collect themes
+	themesCat := collectCategory(configFS, "themes", false)
+	totalSize += themesCat.totalSize
+	categories = append(categories, dryRunCategory{
+		label: fmt.Sprintf("%d theme (themes/)", len(themesCat.items)),
+		icon:  "✅",
+		items: themesCat.items,
+	})
+
+	// Collect plugins
+	pluginsCat := collectCategory(configFS, "plugins", false)
+	totalSize += pluginsCat.totalSize
+	categories = append(categories, dryRunCategory{
+		label: fmt.Sprintf("%d plugins (plugins/)", len(pluginsCat.items)),
+		icon:  "✅",
+		items: pluginsCat.items,
+	})
+
+	// Collect personality
+	personalityCat := collectCategory(configFS, "personality", false)
+	totalSize += personalityCat.totalSize
+	categories = append(categories, dryRunCategory{
+		label: fmt.Sprintf("%d personality (personality/)", len(personalityCat.items)),
+		icon:  "✅",
+		items: personalityCat.items,
+	})
+
+	// Collect commands
+	commandsCat := collectCategory(configFS, "commands", false)
+	totalSize += commandsCat.totalSize
+	categories = append(categories, dryRunCategory{
+		label: fmt.Sprintf("%d commands (commands/)", len(commandsCat.items)),
+		icon:  "✅",
+		items: commandsCat.items,
+	})
+
+	// Print the dry-run summary
+	fmt.Println()
+	fmt.Println("🔍 Dry Run — What would be installed:")
+	fmt.Println()
+	fmt.Printf("  Config Directory: %s\n", configDisplayPath)
+	fmt.Println()
+	fmt.Println("  Files to install:")
+	for _, rf := range rootFiles {
+		fmt.Printf("    ✅ %s (%s)\n", rf.name, formatSize(rf.size))
+	}
+	for _, cat := range categories {
+		fmt.Printf("    %s %s\n", cat.icon, cat.label)
+	}
+	fmt.Println()
+	fmt.Printf("  Total size estimate: %s\n", formatSize(totalSize))
+	fmt.Println()
+	fmt.Println("  Post-install:")
+
+	// Check npm
+	if _, npmErr := exec.LookPath("npm"); npmErr == nil {
+		fmt.Println("    - npm install in plugins/")
+	} else {
+		fmt.Println("    - npm install in plugins/ (npm not found, would be skipped)")
+	}
+
+	// Engram status
+	if env.EngramInstalled {
+		fmt.Printf("    - Engram already installed (%s)\n", env.EngramVersion)
+	} else {
+		fmt.Println("    - Download engram binary (latest version)")
+	}
+
+	fmt.Println()
+
+	// Backup info
+	if env.ConfigExists && env.ExistingConfig != "none" {
+		backupTimestamp := time.Now().Format("20060102-150405")
+		backupDisplay := filepath.Join("~", ".config", fmt.Sprintf("opencode-backup-%s", backupTimestamp))
+		fmt.Printf("  Backup: Would create backup of existing %s config at %s/\n", env.ExistingConfig, backupDisplay)
+	} else {
+		fmt.Println("  Backup: No existing config to back up")
+	}
+
+	fmt.Println()
+	fmt.Println("  No changes were made. Run without --dry-run to install.")
+	fmt.Println()
+	return nil
+}
+
+// categoryResult holds the result of collecting files from a category directory.
+type categoryResult struct {
+	items     []dryRunFileInfo
+	totalSize int64
+}
+
+// collectCategory walks a subdirectory of the embedded FS and collects file info.
+// If countDirs is true, directories are counted as items instead of individual files.
+func collectCategory(configFS fs.FS, subDir string, countDirs bool) categoryResult {
+	var result categoryResult
+
+	entries, err := fs.ReadDir(configFS, subDir)
+	if err != nil {
+		return result
+	}
+
+	if countDirs {
+		// Count directories (like skills)
+		for _, entry := range entries {
+			if entry.IsDir() {
+				// Walk the directory to get its total size
+				dirSize := walkDirSize(configFS, subDir+"/"+entry.Name())
+				result.items = append(result.items, dryRunFileInfo{
+					name: entry.Name(),
+					size: dirSize,
+				})
+				result.totalSize += dirSize
+			}
+		}
+	} else {
+		// Count individual files
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			info, err := entry.Info()
+			if err != nil {
+				continue
+			}
+			result.items = append(result.items, dryRunFileInfo{
+				name: entry.Name(),
+				size: info.Size(),
+			})
+			result.totalSize += info.Size()
+		}
+	}
+
+	sort.Slice(result.items, func(i, j int) bool { return result.items[i].name < result.items[j].name })
+	return result
+}
+
+// walkDirSize recursively computes the total size of all files in a directory.
+func walkDirSize(fsys fs.FS, dir string) int64 {
+	var total int64
+	_ = fs.WalkDir(fsys, dir, func(_ string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if !d.IsDir() {
+			info, infoErr := d.Info()
+			if infoErr == nil {
+				total += info.Size()
+			}
+		}
+		return nil
+	})
+	return total
 }
 
 var uninstallCmd = &cobra.Command{
@@ -682,6 +908,7 @@ func init() {
 	// Install command flags
 	installCmd.Flags().BoolVarP(&installYes, "yes", "y", false, "non-interactive mode, accept all defaults")
 	installCmd.Flags().BoolVarP(&installDryRun, "dry-run", "d", false, "show what would happen without making changes")
+	installCmd.Flags().BoolVar(&installTest, "test", false, "install into a temp directory for safe testing")
 
 	// Rollback command flags
 	rollbackCmd.Flags().BoolVarP(&rollbackYes, "yes", "y", false, "Restore most recent backup without prompting")

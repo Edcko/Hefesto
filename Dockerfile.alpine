@@ -1,0 +1,127 @@
+# Hefesto OpenCode Testing Environment — Alpine
+# Dockerfile for isolated testing of Hefesto configuration on Alpine (musl libc)
+#
+# NOTE: Alpine uses musl instead of glibc. The Go binaries (engram, opencode)
+# are statically compiled with CGO_ENABLED=0 and should work on musl.
+
+FROM alpine:latest
+
+# Configurable tool versions — override at build time with --build-arg
+ARG ENGRAM_VERSION=1.3.1
+ARG OPENCODE_VERSION=1.3.13
+
+# Install system dependencies + Node.js
+# Alpine packages: bash (for scripts), git, curl, ca-certificates, nodejs, npm, ripgrep, fzf
+RUN apk add --no-cache \
+    bash \
+    git \
+    curl \
+    ca-certificates \
+    nodejs \
+    npm \
+    ripgrep \
+    fzf
+
+# Install OpenCode from sst/opencode repo
+ARG TARGETARCH
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
+        BINARY="opencode-linux-arm64.tar.gz"; \
+    else \
+        BINARY="opencode-linux-x86_64.tar.gz"; \
+    fi && \
+    curl -fsSL "https://github.com/sst/opencode/releases/download/v${OPENCODE_VERSION}/${BINARY}" -o /tmp/opencode.tar.gz && \
+    tar -xzf /tmp/opencode.tar.gz -C /tmp && \
+    mv /tmp/opencode /usr/local/bin/opencode && \
+    chmod +x /usr/local/bin/opencode && \
+    rm -rf /tmp/opencode.tar.gz
+
+# Install Engram for persistent memory
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
+        ENGRAM_BINARY="engram_${ENGRAM_VERSION}_linux_arm64.tar.gz"; \
+    else \
+        ENGRAM_BINARY="engram_${ENGRAM_VERSION}_linux_amd64.tar.gz"; \
+    fi && \
+    curl -fsSL "https://github.com/Gentleman-Programming/engram/releases/download/v${ENGRAM_VERSION}/${ENGRAM_BINARY}" -o /tmp/engram.tar.gz && \
+    tar -xzf /tmp/engram.tar.gz -C /tmp && \
+    mv /tmp/engram /usr/local/bin/engram && \
+    chmod +x /usr/local/bin/engram && \
+    rm -rf /tmp/engram.tar.gz && \
+    echo "Engram installed: $(engram version)"
+
+# Copy Hefesto configuration to container
+COPY HefestoOpenCode/ /root/.config/opencode/
+
+# Install npm dependencies for Hefesto config
+RUN cd /root/.config/opencode && npm install
+
+# Create workspace directory
+WORKDIR /workspace
+
+# Create minimal test project
+RUN mkdir -p /workspace/src
+
+# Create package.json
+RUN echo '{\n\
+  "name": "hefesto-test-project",\n\
+  "version": "1.0.0",\n\
+  "description": "Test project for Hefesto OpenCode configuration",\n\
+  "main": "src/index.ts",\n\
+  "scripts": {\n\
+    "test": "echo \\"No tests yet\\"",\n\
+    "build": "echo \\"No build configured yet\\""\n\
+  },\n\
+  "keywords": ["hefesto", "opencode", "test"],\n\
+  "license": "MIT"\n\
+}' > /workspace/package.json
+
+# Create a simple TypeScript source file
+RUN echo '// Simple test module for Hefesto testing\n\
+export function greet(name: string): string {\n\
+  return `Hello, ${name}! Welcome to Hefesto.`;\n\
+}\n\
+\n\
+export function add(a: number, b: number): number {\n\
+  return a + b;\n\
+}\n\
+\n\
+export const VERSION = "1.0.0";\n' > /workspace/src/index.ts
+
+# Create a simple test file
+RUN echo '// Simple test file for Hefesto testing\n\
+import { greet, add, VERSION } from "./index";\n\
+\n\
+describe("Hefesto Test Suite", () => {\n\
+  it("should greet correctly", () => {\n\
+    expect(greet("World")).toBe("Hello, World! Welcome to Hefesto.");\n\
+  });\n\
+\n\
+  it("should add numbers", () => {\n\
+    expect(add(2, 3)).toBe(5);\n\
+  });\n\
+\n\
+  it("should have correct version", () => {\n\
+    expect(VERSION).toBe("1.0.0");\n\
+  });\n\
+});\n' > /workspace/src/index.test.ts
+
+# Create .gitignore
+RUN echo 'node_modules/\n\
+dist/\n\
+*.log\n\
+.env\n\
+.DS_Store\n' > /workspace/.gitignore
+
+# Initialize git repository
+RUN git init && \
+    git config user.email "hefesto@test.local" && \
+    git config user.name "Hefesto Test" && \
+    git add . && \
+    git commit -m "Initial commit - test project for Hefesto"
+
+# Print ready message
+RUN echo "🔥 Hefesto test environment ready (Alpine)"
+
+# Keep container alive for interactive testing
+CMD ["tail", "-f", "/dev/null"]

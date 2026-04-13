@@ -1,3 +1,5 @@
+[🇪🇸 Español](README.es.md)
+
 ```
     🔥
    ╱│╲
@@ -33,7 +35,7 @@ No complex setup. No manual file copying. Just install and start building with A
 - **Background Agents Plugin**: Parallel task execution without blocking
 - **Interactive TUI Installer**: Progress tracking with Bubbletea
 - **Homebrew Distribution**: `brew install edcko/tap/hefesto`
-- **Multi-Platform**: darwin/linux × arm64/amd64 binaries
+- **Multi-Platform**: darwin/linux × arm64/amd64 + android-arm64 binaries
 - **Fuego/Forge Theme**: Cohesive visual identity with amber/copper palette
 
 ---
@@ -46,6 +48,9 @@ brew install edcko/tap/hefesto
 
 # Or download binary from GitHub Releases
 # https://github.com/Edcko/Hefesto/releases
+
+# Android/Termux users: download the android-arm64 binary directly
+# from GitHub Releases
 
 # Install Hefesto configuration
 hefesto install
@@ -271,7 +276,7 @@ init → plan → spec → tasks → apply → verify
 
 ### Distribution
 - **Homebrew Tap**: `edcko/tap/hefesto`
-- **GitHub Releases**: 4 platform binaries (darwin/linux × arm64/amd64)
+- **GitHub Releases**: 5 platform binaries (darwin/linux × arm64/amd64 + android-arm64)
 - **Installation Size**: ~15MB (includes all configs, skills, themes)
 
 ### Configuration
@@ -309,6 +314,7 @@ go test ./...
 ```
 Hefesto/
 ├── README.md
+├── README.es.md
 ├── LICENSE
 ├── .gitignore
 ├── HefestoOpenCode/           # Configuration to be deployed

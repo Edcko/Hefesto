@@ -29,6 +29,8 @@ jobs:
             goarch: arm64
           - goos: linux
             goarch: amd64
+          - goos: android
+            goarch: arm64
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -126,6 +128,7 @@ brew install edcko/tap/hefesto
 | macOS | AMD64 (Intel) | `hefesto-darwin-amd64` |
 | Linux | ARM64 | `hefesto-linux-arm64` |
 | Linux | AMD64 | `hefesto-linux-amd64` |
+| Android | ARM64 | `hefesto-android-arm64` |
 
 ### Checksums
 
@@ -154,6 +157,7 @@ EOF
             dist/hefesto-darwin-amd64 \
             dist/hefesto-linux-arm64 \
             dist/hefesto-linux-amd64 \
+            dist/hefesto-android-arm64 \
             dist/checksums.txt
 
       - name: Update Homebrew Formula
@@ -171,12 +175,14 @@ EOF
           DARWIN_AMD64=$(grep "hefesto-darwin-amd64" dist/checksums.txt | awk '{print $1}')
           LINUX_ARM64=$(grep "hefesto-linux-arm64" dist/checksums.txt | awk '{print $1}')
           LINUX_AMD64=$(grep "hefesto-linux-amd64" dist/checksums.txt | awk '{print $1}')
+          ANDROID_ARM64=$(grep "hefesto-android-arm64" dist/checksums.txt | awk '{print $1}')
           
           echo "Checksums extracted:"
           echo "  darwin-arm64:  $DARWIN_ARM64"
           echo "  darwin-amd64:  $DARWIN_AMD64"
           echo "  linux-arm64:   $LINUX_ARM64"
           echo "  linux-amd64:   $LINUX_AMD64"
+          echo "  android-arm64: $ANDROID_ARM64"
           
           # Update Formula/hefesto.rb
           sed -i "s/version \".*\"/version \"$VERSION_NUM\"/" Formula/hefesto.rb
