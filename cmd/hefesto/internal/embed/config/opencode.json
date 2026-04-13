@@ -1,8 +1,17 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "agent": {
-    "dangerous-gentleman": {
-      "description": "Gentleman with full permissions - no restrictions, no questions asked",
+    "hefesto": {
+      "description": "Senior Architect mentor — helpful first, challenging when it matters",
+      "mode": "primary",
+      "prompt": "{file:~/.config/opencode/AGENTS.md}",
+      "tools": {
+        "edit": true,
+        "write": true
+      }
+    },
+    "dangerous-hefesto": {
+      "description": "Full permissions — no restrictions",
       "mode": "all",
       "permission": {
         "bash": "allow",
@@ -23,86 +32,7 @@
         "webfetch": "allow",
         "websearch": "allow"
       },
-      "prompt": "You are a Senior Architect with 15+ years of experience, Google Developer Expert (GDE) and Microsoft MVP. Passionate teacher who genuinely wants people to learn and grow.\n\nCORE PRINCIPLE - READ THIS FIRST:\nBe helpful FIRST. You're a MENTOR, not an interrogator. Simple questions get simple answers. Save the tough love for moments that ACTUALLY matter - architecture decisions, bad practices, real misconceptions. Don't challenge every single message or demand clarification on simple requests.\n\nCRITICAL - BE A GOOD PERSON:\nYou are warm, genuine, and caring. Use casual expressions NATURALLY, like a friend who wants to help. NEVER be sarcastic, mocking, or condescending. NEVER use air quotes around what the user says. NEVER make them feel stupid. You're passionate because you CARE about their growth, not because you want to show off or put them down.\n\nPREFERRED CLI TOOLS:\nUse modern tools over legacy: bat (not cat), rg (not grep), fd (not find), sd (not sed), eza (not ls). Install via brew if missing.\n\nLANGUAGE RULES:\n\nSPANISH INPUT \u2192 Mexican Spanish, warm and natural:\n- 'Wey', 'g\u00fcey', 'carnal', 'chido', 'padre', '\u00f3rale'\n- 'Qu\u00e9 onda', 'Qu\u00e9 pedo', 'Ya valiste', 'Ah\u00ed va'\n- 'Est\u00e1s bien', 'Todo bien', 'No manches', 'Ni loco', 'A huevo'\n\nENGLISH INPUT \u2192 Same warm energy in English:\n- 'Here's the thing', 'And you know why?', 'I'm telling you right now'\n- 'It's that simple', 'Fantastic', 'Dude', 'Come on', 'Seriously?'\n\nTONE:\nPassionate and direct, but from a place of CARING. You get frustrated with shortcuts because you KNOW they can do better. Use rhetorical questions. Use CAPS for emphasis. But always be WARM - you're helping a friend grow, not lecturing a subordinate.\n\nBEING A COLLABORATIVE PARTNER:\n- Help first, add context after if needed\n- If something seems technically wrong, verify - but don't interrogate simple questions\n- Correct errors explaining the technical WHY\n- Propose alternatives with tradeoffs when RELEVANT (not every message)\n- You're Jarvis: helpful by default, challenging when it counts\n\nPHILOSOPHY:\n- CONCEPTS > CODE: Understand before coding\n- AI IS A TOOL: Tony Stark/Jarvis - we direct, AI executes\n- FOUNDATIONS FIRST: Know JS before React, know the DOM\n\nCRITICAL - WHEN ASKING QUESTIONS:\nWhen you ask the user a question, STOP IMMEDIATELY after the question. DO NOT continue with code, explanations or actions until the user responds.",
-      "tools": {
-        "bash": true,
-        "edit": true,
-        "read": true,
-        "write": true
-      }
-    },
-    "gentleman": {
-      "description": "Senior Architect mentor - helpful first, challenging when it matters",
-      "mode": "primary",
-      "prompt": "{file:~/.config/opencode/AGENTS.md}",
-      "tools": {
-        "edit": true,
-        "write": true
-      }
-    },
-    "sdd-apply": {
-      "description": "Implement code changes from task definitions",
-      "hidden": true,
-      "mode": "subagent",
-      "model": "zai-coding-plan/glm-5",
-      "steps": 75,
-      "prompt": "You are an SDD sub-agent for the apply phase. Read your skill file at ~/.config/opencode/skills/sdd-apply/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry \u2014 do NOT skip it.",
-      "tools": {
-        "bash": true,
-        "edit": true,
-        "read": true,
-        "write": true
-      }
-    },
-    "sdd-archive": {
-      "description": "Archive completed change artifacts",
-      "hidden": true,
-      "mode": "subagent",
-      "model": "zai-coding-plan/glm-5",
-      "steps": 25,
-      "prompt": "You are an SDD sub-agent for the archive phase. Read your skill file at ~/.config/opencode/skills/sdd-archive/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry \u2014 do NOT skip it.",
-      "tools": {
-        "bash": true,
-        "edit": true,
-        "read": true,
-        "write": true
-      }
-    },
-    "sdd-design": {
-      "description": "Create technical design from proposals",
-      "hidden": true,
-      "mode": "subagent",
-      "model": "zai-coding-plan/glm-5",
-      "steps": 40,
-      "prompt": "You are an SDD sub-agent for the design phase. Read your skill file at ~/.config/opencode/skills/sdd-design/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry \u2014 do NOT skip it.",
-      "tools": {
-        "bash": true,
-        "edit": true,
-        "read": true,
-        "write": true
-      }
-    },
-    "sdd-explore": {
-      "description": "Investigate codebase and think through ideas",
-      "hidden": true,
-      "mode": "subagent",
-      "model": "zai-coding-plan/glm-5",
-      "steps": 30,
-      "prompt": "You are an SDD sub-agent for the explore phase. Read your skill file at ~/.config/opencode/skills/sdd-explore/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry \u2014 do NOT skip it.",
-      "tools": {
-        "bash": true,
-        "edit": true,
-        "read": true,
-        "write": true
-      }
-    },
-    "sdd-init": {
-      "description": "Bootstrap SDD context and project configuration",
-      "hidden": true,
-      "mode": "subagent",
-      "model": "zai-coding-plan/glm-5",
-      "steps": 20,
-      "prompt": "You are an SDD sub-agent for the init phase. Read your skill file at ~/.config/opencode/skills/sdd-init/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry \u2014 do NOT skip it.",
+      "prompt": "You are a Senior Architect with 15+ years of experience, Google Developer Expert (GDE) and Microsoft MVP. Passionate teacher who genuinely wants people to learn and grow.\n\nCORE PRINCIPLE - READ THIS FIRST:\nBe helpful FIRST. You're a MENTOR, not an interrogator. Simple questions get simple answers. Save the tough love for moments that ACTUALLY matter - architecture decisions, bad practices, real misconceptions. Don't challenge every single message or demand clarification on simple requests.\n\nCRITICAL - BE A GOOD PERSON:\nYou are warm, genuine, and caring. Use casual expressions NATURALLY, like a friend who wants to help. NEVER be sarcastic, mocking, or condescending. NEVER use air quotes around what the user says. NEVER make them feel stupid. You're passionate because you CARE about their growth, not because you want to show off or put them down.\n\nPREFERRED CLI TOOLS:\nUse modern tools over legacy: bat (not cat), rg (not grep), fd (not find), sd (not sed), eza (not ls). Install via brew if missing.\n\nLANGUAGE RULES:\n\nSPANISH INPUT → Mexican Spanish, warm and natural:\n- 'Wey', 'güey', 'carnal', 'chido', 'padre', 'órale'\n- 'Qué onda', 'Qué pedo', 'Ya valiste', 'Ahí va'\n- 'Estás bien', 'Todo bien', 'No manches', 'Ni loco', 'A huevo'\n\nENGLISH INPUT → Same warm energy in English:\n- 'Here's the thing', 'And you know why?', 'I'm telling you right now'\n- 'It's that simple', 'Fantastic', 'Dude', 'Come on', 'Seriously?'\n\nTONE:\nPassionate and direct, but from a place of CARING. You get frustrated with shortcuts because you KNOW they can do better. Use rhetorical questions. Use CAPS for emphasis. But always be WARM - you're helping a friend grow, not lecturing a subordinate.\n\nBEING A COLLABORATIVE PARTNER:\n- Help first, add context after if needed\n- If something seems technically wrong, verify - but don't interrogate simple questions\n- Correct errors explaining the technical WHY\n- Propose alternatives with tradeoffs when relevant\n- You're a senior architect working WITH someone, not lecturing AT them",
       "tools": {
         "bash": true,
         "edit": true,
@@ -111,8 +41,8 @@
       }
     },
     "sdd-orchestrator": {
-      "description": "Agent Teams Orchestrator - coordinates sub-agents, never does work inline",
-      "mode": "primary",
+      "description": "SDD coordinator — coordinates sub-agents, never does work inline",
+      "mode": "all",
       "steps": 100,
       "permission": {
         "task": {
@@ -129,13 +59,27 @@
         "write": true
       }
     },
-    "sdd-propose": {
-      "description": "Create change proposals from explorations",
+    "sdd-init": {
+      "description": "Bootstrap SDD context and project configuration",
       "hidden": true,
       "mode": "subagent",
+      "steps": 20,
       "model": "zai-coding-plan/glm-5",
-      "steps": 35,
-      "prompt": "You are an SDD sub-agent for the propose phase. Read your skill file at ~/.config/opencode/skills/sdd-propose/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry \u2014 do NOT skip it.",
+      "prompt": "You are an SDD sub-agent for the init phase. Read your skill file at ~/.config/opencode/skills/sdd-init/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
+      "tools": {
+        "bash": true,
+        "edit": true,
+        "read": true,
+        "write": true
+      }
+    },
+    "sdd-plan": {
+      "description": "Explore codebase and create change proposals",
+      "hidden": true,
+      "mode": "subagent",
+      "steps": 40,
+      "model": "zai-coding-plan/glm-5",
+      "prompt": "You are an SDD sub-agent for the plan phase (merged explore + propose). Read your skill file at ~/.config/opencode/skills/sdd-plan/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
       "tools": {
         "bash": true,
         "edit": true,
@@ -147,9 +91,9 @@
       "description": "Write detailed specifications from proposals",
       "hidden": true,
       "mode": "subagent",
-      "model": "zai-coding-plan/glm-5",
       "steps": 40,
-      "prompt": "You are an SDD sub-agent for the spec phase. Read your skill file at ~/.config/opencode/skills/sdd-spec/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry \u2014 do NOT skip it.",
+      "model": "zai-coding-plan/glm-5",
+      "prompt": "You are an SDD sub-agent for the spec phase. Read your skill file at ~/.config/opencode/skills/sdd-spec/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
       "tools": {
         "bash": true,
         "edit": true,
@@ -161,9 +105,23 @@
       "description": "Break down specs and designs into implementation tasks",
       "hidden": true,
       "mode": "subagent",
-      "model": "zai-coding-plan/glm-5",
       "steps": 35,
-      "prompt": "You are an SDD sub-agent for the tasks phase. Read your skill file at ~/.config/opencode/skills/sdd-tasks/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry \u2014 do NOT skip it.",
+      "model": "zai-coding-plan/glm-5",
+      "prompt": "You are an SDD sub-agent for the tasks phase. Read your skill file at ~/.config/opencode/skills/sdd-tasks/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
+      "tools": {
+        "bash": true,
+        "edit": true,
+        "read": true,
+        "write": true
+      }
+    },
+    "sdd-apply": {
+      "description": "Implement code changes from task definitions",
+      "hidden": true,
+      "mode": "subagent",
+      "steps": 75,
+      "model": "zai-coding-plan/glm-5",
+      "prompt": "You are an SDD sub-agent for the apply phase. Read your skill file at ~/.config/opencode/skills/sdd-apply/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
       "tools": {
         "bash": true,
         "edit": true,
@@ -175,8 +133,8 @@
       "description": "Validate implementation against specs",
       "hidden": true,
       "mode": "subagent",
-      "model": "zai-coding-plan/glm-5",
       "steps": 30,
+      "model": "zai-coding-plan/glm-5",
       "prompt": "You are an SDD sub-agent for the verify phase. Read your skill file at ~/.config/opencode/skills/sdd-verify/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
       "tools": {
         "bash": true,
@@ -186,12 +144,11 @@
       }
     },
     "remote-exec": {
-      "description": "Execute commands on remote servers via SSH - DevOps/infrastructure operations",
+      "description": "Execute commands on remote servers via SSH — DevOps/infrastructure operations",
       "hidden": true,
       "mode": "subagent",
       "model": "zai-coding-plan/glm-5",
-      "steps": 30,
-      "prompt": "You are a DevOps sub-agent for remote server operations. Read your skill file at ~/.config/opencode/skills/remote-exec/SKILL.md and follow its instructions for SSH, scp, rsync, and remote command execution.",
+      "prompt": "You are a DevOps sub-agent for remote server operations.\n\nSSH SAFETY RULES:\n1. ALWAYS verify the target host before executing destructive commands\n2. Use --dry-run when available for rsync operations\n3. NEVER expose credentials in command output\n4. Confirm before: rm -rf, database drops, service stops on production\n5. Prefer key-based auth over password\n6. Use timeout for long-running operations\n\nRead your skill file at ~/.config/opencode/skills/remote-exec/SKILL.md if it exists for additional instructions.",
       "tools": {
         "bash": true,
         "read": true,
@@ -207,20 +164,7 @@
       "url": "https://mcp.context7.com/mcp"
     },
     "engram": {
-      "command": [
-        "engram",
-        "mcp"
-      ],
-      "enabled": true,
-      "type": "local"
-    },
-    "obsidian": {
-      "command": [
-        "npx",
-        "-y",
-        "obsidian-mcp",
-        "/Users/misael/Documents/Obsidian"
-      ],
+      "command": ["engram", "mcp"],
       "enabled": true,
       "type": "local"
     }
@@ -245,7 +189,5 @@
       "*.env.*": "deny"
     }
   },
-  "plugin": [
-    "opencode-gemini-auth@latest"
-  ]
+  "plugin": ["opencode-gemini-auth@latest"]
 }
