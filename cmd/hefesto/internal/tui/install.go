@@ -347,6 +347,13 @@ func (m *InstallModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *InstallModel) View() string {
 	width := ResolveContentWidth(m.width)
 
+	// Calculate inner content width accounting for frame border + padding.
+	// RoundedBorder adds 2 chars (1 per side), PadBox adds 4 chars (2 per side) = 6 total.
+	innerWidth := width - (PadBox*2 + 2)
+	if innerWidth < 20 {
+		innerWidth = 20
+	}
+
 	// Wizard progress: Welcome → Detect → Select → Backup → [Install] → Complete
 	wizardSteps := []WizardStep{
 		{Label: "Welcome", Done: true},
@@ -360,22 +367,22 @@ func (m *InstallModel) View() string {
 	var b strings.Builder
 
 	// Wizard progress indicator
-	b.WriteString(RenderWizardProgress(wizardSteps, width))
+	b.WriteString(RenderWizardProgress(wizardSteps, innerWidth))
 	b.WriteString(strings.Repeat("\n", SpaceSM))
 
 	// Section title
-	b.WriteString(RenderSectionTitle("Installing", width))
+	b.WriteString(RenderSectionTitle("Installing", innerWidth))
 	b.WriteString(strings.Repeat("\n", SpaceSM))
 
 	// Step list
 	for i, step := range m.steps {
-		b.WriteString(m.renderStep(i, step, width))
+		b.WriteString(m.renderStep(i, step, innerWidth))
 	}
 
 	// Current step detail line
 	detail := m.getCurrentDetail()
 	b.WriteString(strings.Repeat("\n", SpaceXS))
-	b.WriteString(CenterText(GrayText(detail), width))
+	b.WriteString(CenterText(GrayText(detail), innerWidth))
 
 	return RenderScreenFrame(b.String(), FrameOptions{
 		Width:  m.width,
@@ -418,24 +425,33 @@ func (m *InstallModel) renderStep(index int, step InstallStep, width int) string
 
 	// Progress bar for running copy step
 	if step.Status == StepRunning && step.Name == "Copying configuration" {
-		progressBarWidth := 20
+		// Scale progress bar to fit within the available inner width.
+		// Reserve space for: " " + "100%" + " " + detail(~15) = ~21 chars
+		progressBarWidth := width - 21
+		if progressBarWidth > 20 {
+			progressBarWidth = 20
+		}
+		if progressBarWidth < 5 {
+			progressBarWidth = 5
+		}
+
 		progressBar := renderProgressBar(progressBarWidth, step.Progress)
 		percent := int(step.Progress * 100)
 
-		progressText := fmt.Sprintf("%s %d%%", progressBar, percent)
+		// Style bar and percent separately in amber, detail in gray.
+		// Avoids double-styling: the old code wrapped everything in
+		// Foreground(ColorAmber) including the already-gray detail text.
+		progressText := fmt.Sprintf("%s %s", AmberText(progressBar), AmberText(fmt.Sprintf("%d%%", percent)))
 		if step.Detail != "" {
 			detail := step.Detail
 			runes := []rune(detail)
 			if len(runes) > 15 {
 				detail = "..." + string(runes[len(runes)-12:])
 			}
-			progressText = fmt.Sprintf("%s %d%% %s", progressBar, percent, GrayText(detail))
+			progressText += " " + GrayText(detail)
 		}
 
-		lines = append(lines, CenterText(
-			lipgloss.NewStyle().Foreground(ColorAmber).Render(progressText),
-			width,
-		))
+		lines = append(lines, CenterText(progressText, width))
 	}
 
 	return strings.Join(lines, "\n") + "\n"

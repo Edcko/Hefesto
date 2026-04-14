@@ -150,7 +150,7 @@ func TestWelcomeViewContainsExpectedContent(t *testing.T) {
 		{"banner", "*"},
 		{"version", "HEFESTO"},
 		{"tagline", "AI Dev Environment Forge"},
-		{"description", "Hefesto will configure your OpenCode environment"},
+		{"description", "Set up your AI-powered dev environment in seconds"},
 		{"install header", "What will be installed"},
 		{"enter key", "Enter"},
 		{"help bar continue", "Continue"},

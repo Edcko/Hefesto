@@ -48,16 +48,16 @@ func (m *WelcomeModel) View() string {
 	hero := RenderCenteredHero(BannerAnvil, "HEFESTO "+Version, "AI Dev Environment Forge", width)
 
 	// ===== Description =====
-	desc := CenterText(WhiteText("Hefesto will configure your OpenCode environment"), width) + "\n" +
-		CenterText(WhiteText("with agents, skills, themes and persistence."), width)
+	desc := CenterText(WhiteText("Set up your AI-powered dev environment in seconds."), width) + "\n" +
+		CenterText(WhiteText("Curated skills, smart agents, zero configuration."), width)
 
 	// ===== What will be installed =====
 	installHeader := CenterText(CopperText("What will be installed:"), width)
 
 	items := []string{
-		"25 AI skills (Angular, React, SDD...)",
-		"SDD orchestrator + 6 phase agents",
-		"Fuego/Forge theme (amber/copper)",
+		"30 curated AI skills (Angular, React, SDD)",
+		"SDD orchestrator with 6 phase agents",
+		"Fuego/Forge theme (amber & copper)",
 		"Engram persistent memory",
 		"Background agents plugin",
 	}
