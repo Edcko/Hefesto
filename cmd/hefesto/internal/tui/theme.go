@@ -238,27 +238,39 @@ var (
 // ===== Status Icons =====
 
 const (
-	IconCheck   = "✓"
-	IconCross   = "✗"
+	IconCheck  = "✓"
+	IconCross  = "✗"
+	IconArrow  = "→"
+	IconBullet = "•"
+	IconFire   = "*"
+
+	// Deprecated: IconSpinner is a concatenated string of Braille characters.
+	// Do NOT index this string — Braille chars are 3 bytes each, so byte
+	// indexing lands in the middle of UTF-8 sequences and renders garbage.
+	// Use SpinnerFrames instead.
 	IconSpinner = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
-	IconArrow   = "→"
-	IconBullet  = "•"
-	IconFire    = "*"
 )
+
+// SpinnerFrames holds the Braille spinner animation frames as individual
+// strings. Each element is a single rune, safe to index by position.
+var SpinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
 // ===== ASCII Art Banner - The Anvil with Flames =====
 
 // BannerAnvil is the ASCII art anvil with flame spark.
 // Uses single-width characters only to avoid alignment issues in terminals.
 // No leading newline — the caller controls spacing.
-const BannerAnvil = `       *
-      ╱│╲
-     ╱ │ ╲
-    ╱  │  ╲
-   ╱___▼___╲
-   ║███████║
-   ║███████║
-   ╰═══════╯`
+// Every line is exactly 13 terminal columns wide with the spine (│, ▼) at
+// column index 6 (the exact center). This ensures CenterText aligns all
+// lines identically regardless of terminal width — no stairstep effect.
+const BannerAnvil = `      *      
+     ╱│╲     
+    ╱ │ ╲    
+   ╱  │  ╲   
+  ╱___▼___╲  
+  ║███████║  
+  ║███████║  
+  ╰═══════╯  `
 
 // Logo - Alias for BannerAnvil (backward compatibility)
 var Logo = BannerAnvil

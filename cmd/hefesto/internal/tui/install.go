@@ -287,9 +287,8 @@ func (m *InstallModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case TickMsg:
 		// Update spinner animation
-		spinnerFrames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
-		m.spinnerIndex = (m.spinnerIndex + 1) % len(spinnerFrames)
-		m.spinnerFrame = spinnerFrames[m.spinnerIndex]
+		m.spinnerIndex = (m.spinnerIndex + 1) % len(SpinnerFrames)
+		m.spinnerFrame = SpinnerFrames[m.spinnerIndex]
 		if !m.complete {
 			return m, Tick(100 * time.Millisecond)
 		}

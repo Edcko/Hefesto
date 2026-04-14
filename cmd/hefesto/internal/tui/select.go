@@ -285,6 +285,7 @@ func (m *SelectModel) View() string {
 	b.WriteString(title)
 	b.WriteString(strings.Repeat("\n", SpaceSM))
 	b.WriteString(itemLines.String())
+	b.WriteString(strings.Repeat("\n", SpaceSM))
 	b.WriteString(CenterText(continueText, innerWidth))
 	b.WriteString(strings.Repeat("\n", SpaceSM))
 	b.WriteString(helpBar)

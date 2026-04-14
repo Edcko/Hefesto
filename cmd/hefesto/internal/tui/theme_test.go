@@ -3,6 +3,7 @@ package tui
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 // ===== Screen.String() tests =====
@@ -416,8 +417,14 @@ func TestIconConstants(t *testing.T) {
 	if IconFire != "*" {
 		t.Errorf("IconFire = %q, want '*'", IconFire)
 	}
-	if len(IconSpinner) == 0 {
-		t.Error("IconSpinner is empty, expected braille characters")
+	// SpinnerFrames must have exactly 10 single-rune frames
+	if len(SpinnerFrames) != 10 {
+		t.Errorf("len(SpinnerFrames) = %d, want 10", len(SpinnerFrames))
+	}
+	for i, frame := range SpinnerFrames {
+		if []rune(frame)[0] == utf8.RuneError {
+			t.Errorf("SpinnerFrames[%d] contains RuneError", i)
+		}
 	}
 }
 

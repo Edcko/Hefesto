@@ -118,7 +118,7 @@ func (m *BackupModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case TickMsg:
 		if m.backingUp {
-			m.spinner = (m.spinner + 1) % len(IconSpinner)
+			m.spinner = (m.spinner + 1) % len(SpinnerFrames)
 			return m, Tick(100 * time.Millisecond)
 		}
 		return m, nil
@@ -257,8 +257,7 @@ func (m *BackupModel) renderConfirmation(b *strings.Builder, width int) {
 
 // renderProgress renders the backup-in-progress state
 func (m *BackupModel) renderProgress(b *strings.Builder, width int) {
-	spinnerChar := string(IconSpinner[m.spinner])
-	status := AmberText(spinnerChar + " Creating backup...")
+	status := AmberText(SpinnerFrames[m.spinner] + " Creating backup...")
 	b.WriteString(CenterText(status, width))
 	b.WriteString(strings.Repeat("\n", SpaceSM))
 

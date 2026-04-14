@@ -131,7 +131,7 @@ func (m *DetectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case TickMsg:
 		if m.detecting {
-			m.spinner = (m.spinner + 1) % len(IconSpinner)
+			m.spinner = (m.spinner + 1) % len(SpinnerFrames)
 			return m, Tick(100 * time.Millisecond)
 		}
 		return m, nil
@@ -176,8 +176,7 @@ func (m *DetectModel) View() string {
 	// ===== Status line =====
 	var statusLine string
 	if m.detecting {
-		spinnerChar := string(IconSpinner[m.spinner])
-		statusLine = CenterText(AmberText(spinnerChar+" Detecting environment..."), width)
+		statusLine = CenterText(AmberText(SpinnerFrames[m.spinner]+" Detecting environment..."), width)
 	} else {
 		statusLine = CenterText(GreenText(IconCheck+" Detection complete"), width)
 	}
@@ -229,8 +228,7 @@ func (m *DetectModel) renderResult(result DetectResult, width int) string {
 	var styledName string
 
 	if result.Checking {
-		spinnerChar := string(IconSpinner[m.spinner])
-		icon = AmberText(spinnerChar)
+		icon = AmberText(SpinnerFrames[m.spinner])
 		styledName = WhiteText(result.Name)
 	} else if result.Found {
 		icon = GreenText(IconCheck)
