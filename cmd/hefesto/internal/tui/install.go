@@ -15,14 +15,6 @@ import (
 	"github.com/Edcko/Hefesto/cmd/hefesto/internal/install"
 )
 
-// Step icons for visual state indicators
-const (
-	IconCompleted  = "✅"
-	IconInProgress = "🔄"
-	IconPending    = "⏳"
-	IconError      = "❌"
-)
-
 // InstallStep represents a single installation step
 type InstallStep struct {
 	Name      string
@@ -353,167 +345,100 @@ func (m *InstallModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View implements tea.Model
 func (m *InstallModel) View() string {
-	var b strings.Builder
+	width := ResolveContentWidth(m.width)
 
-	// Box width for layout
-	boxWidth := 46
-
-	// Top border
-	b.WriteString("╭")
-	b.WriteString(strings.Repeat("─", boxWidth))
-	b.WriteString("╮\n")
-
-	// Title
-	title := "🔥 HEFESTO — Installing..."
-	titleLine := fmt.Sprintf("│  %s", title)
-	titleLine = titleLine + strings.Repeat(" ", boxWidth-len(titleLine)+2) + "│\n"
-	b.WriteString(lipgloss.NewStyle().Foreground(Primary).Render(titleLine))
-
-	// Empty line
-	b.WriteString("│")
-	b.WriteString(strings.Repeat(" ", boxWidth))
-	b.WriteString("│\n")
-
-	// Steps with visual indicators
-	for i, step := range m.steps {
-		b.WriteString(m.renderStepLine(i, step, boxWidth))
+	// Wizard progress: Welcome → Detect → Select → Backup → [Install] → Complete
+	wizardSteps := []WizardStep{
+		{Label: "Welcome", Done: true},
+		{Label: "Detect", Done: true},
+		{Label: "Select", Done: true},
+		{Label: "Backup", Done: true},
+		{Label: "Install", Active: true},
+		{Label: "Complete"},
 	}
 
-	// Empty line
-	b.WriteString("│")
-	b.WriteString(strings.Repeat(" ", boxWidth))
-	b.WriteString("│\n")
+	var b strings.Builder
 
-	// Separator line for current detail
-	separator := strings.Repeat("━", boxWidth)
-	b.WriteString("│")
-	b.WriteString(lipgloss.NewStyle().Foreground(Secondary).Render(separator))
-	b.WriteString("│\n")
+	// Wizard progress indicator
+	b.WriteString(RenderWizardProgress(wizardSteps, width))
+	b.WriteString(strings.Repeat("\n", SpaceSM))
 
-	// Current step detail
-	currentDetail := m.getCurrentDetail()
-	detailLine := fmt.Sprintf("│  %s", currentDetail)
-	detailLine = detailLine + strings.Repeat(" ", boxWidth-len(currentDetail)-2) + "│\n"
-	b.WriteString(lipgloss.NewStyle().Foreground(TextMuted).Render(detailLine))
+	// Section title
+	b.WriteString(RenderSectionTitle("Installing", width))
+	b.WriteString(strings.Repeat("\n", SpaceSM))
 
-	// Bottom border
-	b.WriteString("╰")
-	b.WriteString(strings.Repeat("─", boxWidth))
-	b.WriteString("╯\n")
+	// Step list
+	for i, step := range m.steps {
+		b.WriteString(m.renderStep(i, step, width))
+	}
 
-	return CenterText(b.String(), 60)
+	// Current step detail line
+	detail := m.getCurrentDetail()
+	b.WriteString(strings.Repeat("\n", SpaceXS))
+	b.WriteString(CenterText(GrayText(detail), width))
+
+	return RenderScreenFrame(b.String(), FrameOptions{
+		Width:  m.width,
+		Height: m.height,
+		Border: BorderRounded,
+	})
 }
 
-// renderStepLine renders a single step line with icon, name, and status
-func (m *InstallModel) renderStepLine(index int, step InstallStep, boxWidth int) string {
+// renderStep renders a single step with icon and status
+func (m *InstallModel) renderStep(index int, step InstallStep, width int) string {
 	var icon string
 	var nameStyle lipgloss.Style
 
 	switch step.Status {
 	case StepPending:
-		icon = IconPending
-		nameStyle = lipgloss.NewStyle().Foreground(TextMuted)
+		icon = DimTextStyle.Render("○")
+		nameStyle = DimTextStyle
 	case StepRunning:
-		icon = m.spinnerFrame
-		nameStyle = lipgloss.NewStyle().Foreground(Primary)
+		icon = AmberText(m.spinnerFrame)
+		nameStyle = lipgloss.NewStyle().Foreground(ColorAmber)
 	case StepComplete:
-		icon = IconCompleted
-		nameStyle = lipgloss.NewStyle().Foreground(Success)
+		icon = GreenText(IconCheck)
+		nameStyle = lipgloss.NewStyle().Foreground(ColorGreen)
 	case StepError:
-		icon = IconError
-		nameStyle = lipgloss.NewStyle().Foreground(Error)
+		icon = RedText(IconCross)
+		nameStyle = lipgloss.NewStyle().Foreground(ColorRed)
 	}
 
-	// Build the step line
-	stepText := fmt.Sprintf("%s %s", icon, step.Name)
-	styledStep := nameStyle.Render(stepText)
+	stepLine := fmt.Sprintf("  %s %s", icon, nameStyle.Render(step.Name))
 
 	// Add timing for completed steps
 	if step.Status == StepComplete && !step.EndTime.IsZero() && !step.StartTime.IsZero() {
 		duration := step.EndTime.Sub(step.StartTime)
 		timing := fmt.Sprintf("(%.1fs)", duration.Seconds())
-		styledStep = styledStep + " " + lipgloss.NewStyle().Foreground(TextMuted).Render(timing)
+		stepLine += " " + GrayText(timing)
 	}
 
-	// Add progress bar for running steps (especially the copy step)
+	var lines []string
+	lines = append(lines, CenterText(stepLine, width))
+
+	// Progress bar for running copy step
 	if step.Status == StepRunning && step.Name == "Copying configuration" {
-		return m.renderStepWithProgress(index, step, boxWidth, icon, nameStyle)
-	}
+		progressBarWidth := 20
+		progressBar := renderProgressBar(progressBarWidth, step.Progress)
+		percent := int(step.Progress * 100)
 
-	// Format the line with padding
-	line := fmt.Sprintf("│  %s", styledStep)
-	padding := boxWidth - len(line) + 2
-	if padding > 0 {
-		line = line + strings.Repeat(" ", padding)
-	}
-	line = line + "│\n"
-
-	return line
-}
-
-// renderStepWithProgress renders a step with a progress bar (for copy step)
-func (m *InstallModel) renderStepWithProgress(index int, step InstallStep, boxWidth int, icon string, nameStyle lipgloss.Style) string {
-	var b strings.Builder
-
-	// Step name line
-	stepText := fmt.Sprintf("%s %s", icon, step.Name)
-	styledStep := nameStyle.Render(stepText)
-	line := fmt.Sprintf("│  %s", styledStep)
-	padding := boxWidth - len(line) + 2
-	if padding > 0 {
-		line = line + strings.Repeat(" ", padding)
-	}
-	line = line + "│\n"
-	b.WriteString(line)
-
-	// Progress bar line
-	progressBarWidth := 20
-	progressBar := renderProgressBar(progressBarWidth, step.Progress)
-
-	// Add percentage and detail
-	percent := int(step.Progress * 100)
-	progressText := fmt.Sprintf("     %s %d%%", progressBar, percent)
-
-	// Add detail if available
-	if step.Detail != "" {
-		// Truncate detail if too long
-		detail := step.Detail
-		if len(detail) > 15 {
-			detail = "..." + detail[len(detail)-12:]
+		progressText := fmt.Sprintf("%s %d%%", progressBar, percent)
+		if step.Detail != "" {
+			detail := step.Detail
+			runes := []rune(detail)
+			if len(runes) > 15 {
+				detail = "..." + string(runes[len(runes)-12:])
+			}
+			progressText = fmt.Sprintf("%s %d%% %s", progressBar, percent, GrayText(detail))
 		}
-		progressText = fmt.Sprintf("     %s %d%% — %s", progressBar, percent, detail)
+
+		lines = append(lines, CenterText(
+			lipgloss.NewStyle().Foreground(ColorAmber).Render(progressText),
+			width,
+		))
 	}
 
-	progressLine := lipgloss.NewStyle().Foreground(PrimaryDark).Render(progressText)
-	fullLine := fmt.Sprintf("│%s", progressLine)
-
-	// Pad to box width
-	lineLen := len(progressText) + 1 // +1 for the │
-	padding = boxWidth - lineLen + 1
-	if padding > 0 {
-		fullLine = fullLine + strings.Repeat(" ", padding)
-	}
-	fullLine = fullLine + "│\n"
-	b.WriteString(fullLine)
-
-	return b.String()
-}
-
-// renderProgressBar renders a progress bar with the given width and progress
-func renderProgressBar(width int, progress float64) string {
-	if progress < 0 {
-		progress = 0
-	}
-	if progress > 1 {
-		progress = 1
-	}
-
-	filledWidth := int(float64(width) * progress)
-
-	filled := strings.Repeat("█", filledWidth)
-	empty := strings.Repeat("░", width-filledWidth)
-
-	return filled + empty
+	return strings.Join(lines, "\n") + "\n"
 }
 
 // getCurrentDetail returns the detail text for the current operation
@@ -551,6 +476,23 @@ func (m *InstallModel) getCurrentDetail() string {
 	default:
 		return "Processing..."
 	}
+}
+
+// renderProgressBar renders a progress bar with the given width and progress
+func renderProgressBar(width int, progress float64) string {
+	if progress < 0 {
+		progress = 0
+	}
+	if progress > 1 {
+		progress = 1
+	}
+
+	filledWidth := int(float64(width) * progress)
+
+	filled := strings.Repeat("█", filledWidth)
+	empty := strings.Repeat("░", width-filledWidth)
+
+	return filled + empty
 }
 
 // expandHomePath expands ~ to the user's home directory

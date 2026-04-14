@@ -34,8 +34,12 @@ var (
 	ColorRed = lipgloss.Color("#FF4444")
 	// Error - Alias for ColorRed (backward compatibility)
 	Error = ColorRed
-	// ColorGray - Muted text
-	ColorGray = lipgloss.Color("#666666")
+	// ColorGray - Muted text (adjusted from #666666 for readability)
+	ColorGray = lipgloss.Color("#7C7C7C")
+	// ColorMutedBorder - Subtle borders that don't compete with content
+	ColorMutedBorder = lipgloss.Color("#3A3A3A")
+	// ColorDimText - Very dim text for disabled/deemphasized content
+	ColorDimText = lipgloss.Color("#4A4A4A")
 	// ColorWhite - Normal text
 	ColorWhite = lipgloss.Color("#FFFFFF")
 	// ColorGreen - Success indicators
@@ -143,6 +147,32 @@ var (
 			Margin(1, 2)
 )
 
+// ===== Typography Hierarchy =====
+//
+// These styles define the visual voice of the TUI. Use HeroTitleStyle for
+// splash moments, SectionTitleStyle for screen headings, and DimTextStyle
+// for content that should recede visually.
+
+var (
+	// HeroTitleStyle - Main hero title for splash/celebration screens (no padding)
+	HeroTitleStyle = lipgloss.NewStyle().
+			Foreground(ColorAmber).
+			Bold(true)
+
+	// SectionTitleStyle - Section headings within screens
+	SectionTitleStyle = lipgloss.NewStyle().
+				Foreground(ColorAmber).
+				Bold(true)
+
+	// DimTextStyle - Very dim text for disabled/deemphasized content
+	DimTextStyle = lipgloss.NewStyle().
+			Foreground(ColorDimText)
+
+	// MutedBorderTextStyle - For subtle border decoration
+	MutedBorderTextStyle = lipgloss.NewStyle().
+				Foreground(ColorMutedBorder)
+)
+
 // ===== Progress Bar Styles =====
 
 var (
@@ -168,21 +198,22 @@ const (
 	IconSpinner = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 	IconArrow   = "→"
 	IconBullet  = "•"
-	IconFire    = "🔥"
+	IconFire    = "*"
 )
 
 // ===== ASCII Art Banner - The Anvil with Flames =====
 
-// BannerAnvil is the ASCII art anvil with flames
+// BannerAnvil is the ASCII art anvil with flame spark.
+// Uses single-width characters only to avoid alignment issues in terminals.
 const BannerAnvil = `
-    🔥
-   ╱│╲
-  ╱ │ ╲
- ╱  │  ╲
-╱___▼___╲
- ║███████║
- ║███████║
- ╰═══════╯`
+     *
+    ╱│╲
+   ╱ │ ╲
+  ╱  │  ╲
+ ╱___▼___╲
+  ║███████║
+  ║███████║
+  ╰═══════╯`
 
 // Logo - Alias for BannerAnvil (backward compatibility)
 var Logo = BannerAnvil
@@ -317,4 +348,25 @@ func GreenText(text string) string {
 // RedText renders text in red color
 func RedText(text string) string {
 	return lipgloss.NewStyle().Foreground(ColorRed).Render(text)
+}
+
+// stripAnsi removes ANSI escape codes from a string for length calculation.
+// Used internally for visual-width calculations.
+func stripAnsi(s string) string {
+	var result strings.Builder
+	inEscape := false
+	for _, r := range s {
+		if r == '\x1b' {
+			inEscape = true
+			continue
+		}
+		if inEscape {
+			if r == 'm' {
+				inEscape = false
+			}
+			continue
+		}
+		result.WriteRune(r)
+	}
+	return result.String()
 }

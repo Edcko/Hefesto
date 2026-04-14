@@ -227,118 +227,125 @@ func (m *SelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// wizardSteps returns the wizard progress steps for the select screen.
+func (m *SelectModel) wizardSteps() []WizardStep {
+	return []WizardStep{
+		{Label: "Welcome", Done: true},
+		{Label: "Detect", Done: true},
+		{Label: "Select", Active: true},
+		{Label: "Install"},
+	}
+}
+
 // View implements tea.Model.
 func (m *SelectModel) View() string {
-	// Adapt to terminal width like welcome.go does.
-	termWidth := m.width
-	if termWidth == 0 {
-		termWidth = 60
+	width := ResolveContentWidth(m.width)
+
+	// Calculate inner content width accounting for border + padding.
+	// RoundedBorder adds 2 chars per side, PadBox adds 2 per side = 8 total.
+	innerWidth := width - (PadBox*2 + 2*2)
+	if innerWidth < 20 {
+		innerWidth = 20
 	}
 
-	// Inner content width that lipgloss border+padding will render inside.
-	// lipgloss DoubleBorder adds 2 chars per side, Padding(0,1) adds 1 per side = 6 total.
-	// So a Width(w) on the style means the inner text area is w chars wide.
-	boxInnerWidth := 46
-	if termWidth < boxInnerWidth+8 {
-		boxInnerWidth = termWidth - 8
-	}
-	if boxInnerWidth < 20 {
-		boxInnerWidth = 20
-	}
+	// ===== Wizard progress =====
+	progress := RenderWizardProgress(m.wizardSteps(), width)
 
-	// Styles
-	borderStyle := lipgloss.NewStyle().
-		Border(lipgloss.DoubleBorder()).
-		BorderForeground(ColorCopper).
-		Padding(0, 1)
+	// ===== Section title =====
+	title := RenderSectionTitle("Select Components to Install", width)
 
-	titleStyle := lipgloss.NewStyle().
-		Foreground(ColorAmber).
-		Bold(true)
-
-	mutedStyle := lipgloss.NewStyle().
-		Foreground(ColorGray)
-
-	// Build content lines
-	var lines []string
-
-	// Title
-	lines = append(lines, titleStyle.Render("Select Components to Install"))
-	lines = append(lines, "")
-
-	// Key hints — split into two short lines that fit inside boxInnerWidth
-	lines = append(lines, mutedStyle.Render("up/k Navigate  Space/Enter Toggle"))
-	lines = append(lines, mutedStyle.Render("a   Toggle all  q  Quit"))
-	lines = append(lines, "")
-
-	// Component items
+	// ===== Component checklist =====
+	var itemLines strings.Builder
 	for i, item := range m.items.Items {
-		lines = append(lines, m.renderItemLine(i, item, boxInnerWidth))
+		itemLines.WriteString(m.renderItemLine(i, item, innerWidth))
+		itemLines.WriteString("\n")
 	}
 
-	lines = append(lines, "")
-
-	// Continue action
+	// ===== Continue action =====
 	continueText := "[Enter] Continue with selection"
 	if m.continueRow {
-		lines = append(lines, lipgloss.NewStyle().Foreground(ColorAmber).Bold(true).Render(continueText))
+		continueText = AmberText(continueText)
 	} else {
-		lines = append(lines, mutedStyle.Render(continueText))
+		continueText = MutedStyle.Render(continueText)
 	}
 
-	// Render inside bordered box
-	content := strings.Join(lines, "\n")
-	box := borderStyle.
-		Width(boxInnerWidth).
-		Render(content)
+	// ===== Help bar =====
+	helpBar := RenderHelpBar([]KeyHint{
+		{Key: "↑↓", Action: "Navigate"},
+		{Key: "Space", Action: "Toggle"},
+		{Key: "a", Action: "Toggle all"},
+		{Key: "Esc", Action: "Back"},
+		{Key: "q", Action: "Quit"},
+	}, width)
 
-	// Center in terminal
-	return lipgloss.NewStyle().
-		Width(termWidth).
-		Height(m.height).
-		Align(lipgloss.Center, lipgloss.Center).
-		Render(box)
+	// ===== Assemble with spacing rhythm =====
+	var b strings.Builder
+	b.WriteString(progress)
+	b.WriteString("\n")
+	b.WriteString(title)
+	b.WriteString(strings.Repeat("\n", SpaceSM))
+	b.WriteString(itemLines.String())
+	b.WriteString(CenterText(continueText, innerWidth))
+	b.WriteString(strings.Repeat("\n", SpaceSM))
+	b.WriteString(helpBar)
+
+	content := b.String()
+
+	// Wrap in rounded border frame, centered in terminal.
+	return RenderScreenFrame(content, FrameOptions{
+		Width:  width,
+		Height: m.height,
+		Border: BorderRounded,
+	})
 }
 
 // renderItemLine renders a single component item line with checkbox.
-// innerWidth is the available content width inside the box.
+// innerWidth is the available content width inside the border.
 func (m *SelectModel) renderItemLine(index int, item ComponentItem, innerWidth int) string {
 	isActive := !m.continueRow && m.cursor == index
 
+	// Checkbox: ✓ for selected, ○ for unselected
 	var checkbox string
 	if item.Selected {
-		checkbox = "✅"
+		checkbox = GreenText(IconCheck)
 	} else {
-		checkbox = "⬜"
+		checkbox = DimTextStyle.Render("○")
 	}
 
 	// Cursor indicator
 	var cursor string
 	if isActive {
-		cursor = "❯"
+		cursor = AmberText("❯")
 	} else {
 		cursor = " "
 	}
 
-	// Build display text: "✅ Name (description)"
-	displayText := fmt.Sprintf("%s %s (%s)", checkbox, item.Name, item.Description)
+	// Build display: cursor + checkbox + name + description
+	var nameText string
+	if isActive {
+		nameText = AmberText(item.Name)
+	} else if item.Required {
+		nameText = GrayText(item.Name)
+	} else {
+		nameText = WhiteText(item.Name)
+	}
 
-	// Truncate if wider than available space (cursor + space + displayText)
-	maxDisplayWidth := innerWidth - lipgloss.Width(cursor) - 1 // -1 for space after cursor
+	descText := MutedStyle.Render(item.Description)
+	displayText := fmt.Sprintf("%s %s", nameText, descText)
+
+	// Truncate if wider than available space
+	maxDisplayWidth := innerWidth - lipgloss.Width(cursor) - lipgloss.Width(checkbox) - 4 // spaces
 	if lipgloss.Width(displayText) > maxDisplayWidth {
 		displayText = truncateVisual(displayText, maxDisplayWidth)
 	}
 
-	line := cursor + " " + displayText
+	line := fmt.Sprintf("%s %s %s", cursor, checkbox, displayText)
 
-	// Apply styling
+	// Apply full-line styling for active item highlight
 	if isActive {
-		return lipgloss.NewStyle().Foreground(ColorAmber).Bold(true).Render(line)
+		return lipgloss.NewStyle().Bold(true).Render(line)
 	}
-	if item.Required {
-		return lipgloss.NewStyle().Foreground(ColorGray).Render(line)
-	}
-	return lipgloss.NewStyle().Foreground(ColorWhite).Render(line)
+	return line
 }
 
 // truncateVisual truncates a string to fit within maxWidth terminal columns,

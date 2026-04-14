@@ -216,8 +216,9 @@ func TestBulletItem(t *testing.T) {
 
 func TestBannerStyle(t *testing.T) {
 	result := BannerStyle()
-	if !strings.Contains(result, "🔥") {
-		t.Errorf("BannerStyle() = %q, want to contain fire emoji", result)
+	// BannerAnvil now uses single-width * instead of 🔥 to avoid alignment issues
+	if !strings.Contains(result, "*") {
+		t.Errorf("BannerStyle() = %q, want to contain flame spark", result)
 	}
 	// Should contain the anvil structure
 	if !strings.Contains(result, "╱") {
@@ -412,10 +413,48 @@ func TestIconConstants(t *testing.T) {
 	if IconBullet != "•" {
 		t.Errorf("IconBullet = %q, want '•'", IconBullet)
 	}
-	if IconFire != "🔥" {
-		t.Errorf("IconFire = %q, want '🔥'", IconFire)
+	if IconFire != "*" {
+		t.Errorf("IconFire = %q, want '*'", IconFire)
 	}
 	if len(IconSpinner) == 0 {
 		t.Error("IconSpinner is empty, expected braille characters")
+	}
+}
+
+// ===== New color token tests =====
+
+func TestNewColorTokens(t *testing.T) {
+	// ColorMutedBorder should be a non-empty color value
+	mutedBorder := string(ColorMutedBorder)
+	if mutedBorder == "" {
+		t.Error("ColorMutedBorder is empty")
+	}
+	// ColorDimText should be a non-empty color value
+	dimText := string(ColorDimText)
+	if dimText == "" {
+		t.Error("ColorDimText is empty")
+	}
+}
+
+// ===== Typography hierarchy tests =====
+
+func TestHeroTitleStyle(t *testing.T) {
+	result := HeroTitleStyle.Render("Test Hero")
+	if !strings.Contains(result, "Test Hero") {
+		t.Errorf("HeroTitleStyle.Render() = %q, want to contain 'Test Hero'", result)
+	}
+}
+
+func TestSectionTitleStyle(t *testing.T) {
+	result := SectionTitleStyle.Render("Section")
+	if !strings.Contains(result, "Section") {
+		t.Errorf("SectionTitleStyle.Render() = %q, want to contain 'Section'", result)
+	}
+}
+
+func TestDimTextStyle(t *testing.T) {
+	result := DimTextStyle.Render("dim text")
+	if !strings.Contains(result, "dim text") {
+		t.Errorf("DimTextStyle.Render() = %q, want to contain 'dim text'", result)
 	}
 }

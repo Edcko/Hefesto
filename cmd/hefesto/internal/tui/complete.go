@@ -6,14 +6,6 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-)
-
-// Colors for the completion screen
-var (
-	colorAmber  = lipgloss.Color("#FF8C00")
-	colorCopper = lipgloss.Color("#B87333")
-	colorGreen  = lipgloss.Color("#22C55E")
 )
 
 // CompleteModel is the completion screen shown after successful installation
@@ -77,107 +69,72 @@ func (m *CompleteModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View implements tea.Model
 func (m *CompleteModel) View() string {
-	// Box dimensions
-	boxWidth := 54
+	width := ResolveContentWidth(m.width)
 
-	// Styles
-	borderStyle := lipgloss.NewStyle().
-		Border(lipgloss.DoubleBorder()).
-		BorderForeground(colorCopper).
-		Padding(0, 1)
+	// Wizard progress: all done
+	wizardSteps := []WizardStep{
+		{Label: "Welcome", Done: true},
+		{Label: "Detect", Done: true},
+		{Label: "Select", Done: true},
+		{Label: "Backup", Done: true},
+		{Label: "Install", Done: true},
+		{Label: "Complete", Done: true},
+	}
 
-	titleStyle := lipgloss.NewStyle().
-		Foreground(colorAmber).
-		Bold(true)
+	var b strings.Builder
 
-	checkStyle := lipgloss.NewStyle().
-		Foreground(colorGreen)
+	// Wizard progress — all green
+	b.WriteString(RenderWizardProgress(wizardSteps, width))
+	b.WriteString(strings.Repeat("\n", SpaceLG))
 
-	amberStyle := lipgloss.NewStyle().
-		Foreground(colorAmber)
-
-	amberBoldStyle := lipgloss.NewStyle().
-		Foreground(colorAmber).
-		Bold(true)
-
-	mutedStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#888888"))
-
-	// Build content lines
-	var lines []string
-
-	// Empty line at top
-	lines = append(lines, "")
-
-	// Title with fire emojis
-	fireEmoji := "🔥"
-	title := fmt.Sprintf("    %s  Installation Complete!  %s    ", fireEmoji, fireEmoji)
-	lines = append(lines, titleStyle.Render(title))
-
-	// Empty line
-	lines = append(lines, "")
+	// Hero section — borderless celebration
+	b.WriteString(RenderCenteredHero(BannerAnvil, "Installation Complete!", "", width))
+	b.WriteString(strings.Repeat("\n", SpaceSM))
 
 	// Installed components
 	for _, comp := range m.InstalledComponents {
-		check := checkStyle.Render("✅")
-		line := fmt.Sprintf("  %s %-22s %s", check, comp.Name, mutedStyle.Render(comp.Description))
-		lines = append(lines, line)
+		check := GreenText(IconCheck)
+		line := fmt.Sprintf("  %s  %-22s %s", check, WhiteText(comp.Name), GrayText(comp.Description))
+		b.WriteString(CenterText(line, width))
+		b.WriteString("\n")
 	}
 
-	// Empty line
-	lines = append(lines, "")
+	b.WriteString(strings.Repeat("\n", SpaceSM))
 
 	// Installation time
-	durationStr := "⚡ Installed in "
+	durationStr := "Installed in "
 	if m.InstallDuration > 0 {
 		durationStr += m.InstallDuration.Round(time.Millisecond * 100).String()
 	} else {
 		durationStr += "< 1s"
 	}
-	lines = append(lines, "  "+amberStyle.Render(durationStr))
+	b.WriteString(CenterText(AmberText(durationStr), width))
+	b.WriteString(strings.Repeat("\n", SpaceMD))
 
-	// Empty line
-	lines = append(lines, "")
+	// Next steps section
+	b.WriteString(CenterText(CopperText("Start using:"), width))
+	b.WriteString("\n")
+	b.WriteString(CenterText(AmberText("$ opencode"), width))
+	b.WriteString(strings.Repeat("\n", SpaceSM))
 
-	// Start using section
-	lines = append(lines, "  Start using:")
-	lines = append(lines, "    "+amberStyle.Render("$ opencode"))
-
-	// Empty line
-	lines = append(lines, "")
-
-	// Check status section
-	lines = append(lines, "  Check status:")
-	lines = append(lines, "    "+amberStyle.Render("$ hefesto status"))
-
-	// Empty line
-	lines = append(lines, "")
+	b.WriteString(CenterText(CopperText("Check status:"), width))
+	b.WriteString("\n")
+	b.WriteString(CenterText(AmberText("$ hefesto status"), width))
+	b.WriteString(strings.Repeat("\n", SpaceMD))
 
 	// Forge on message
-	forgeOn := amberBoldStyle.Render("  Forge on! 🛠️")
-	lines = append(lines, forgeOn)
+	b.WriteString(CenterText(AmberText("Forge on!"), width))
+	b.WriteString(strings.Repeat("\n", SpaceSM))
 
-	// Empty line
-	lines = append(lines, "")
+	// Help bar
+	hints := []KeyHint{
+		{Key: "q", Action: "Exit"},
+	}
+	b.WriteString(RenderHelpBar(hints, width))
 
-	// Exit instruction
-	lines = append(lines, mutedStyle.Render("  Press q to exit"))
-
-	// Empty line at bottom
-	lines = append(lines, "")
-
-	// Build the box content
-	content := strings.Join(lines, "\n")
-
-	// Apply border
-	box := borderStyle.
-		Width(boxWidth).
-		Render(content)
-
-	// Center the box
-	return lipgloss.NewStyle().
-		Width(m.width).
-		Height(m.height).
-		Align(lipgloss.Center, lipgloss.Center).
-		Render(box)
+	return RenderScreenFrame(b.String(), FrameOptions{
+		Width:  m.width,
+		Height: m.height,
+		Border: BorderNone,
+	})
 }

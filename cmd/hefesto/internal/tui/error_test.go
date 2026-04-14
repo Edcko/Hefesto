@@ -212,7 +212,7 @@ func TestErrorViewContainsExpectedContent(t *testing.T) {
 		contains string
 	}{
 		{"title", "Installation Failed"},
-		{"x emoji", "❌"},
+		{"x icon", IconCross},
 		{"step name", "Copying config"},
 		{"error message", "permission denied"},
 		{"options retry", "Retry"},
@@ -240,7 +240,7 @@ func TestErrorViewWithPartialInstall(t *testing.T) {
 
 	view := m.View()
 
-	if !strings.Contains(view, "Partial installation detected") {
+	if !strings.Contains(view, "Partial installation status") {
 		t.Error("View() missing partial install header")
 	}
 	if !strings.Contains(view, "Detect environment") {

@@ -120,7 +120,7 @@ func TestCompleteViewContainsExpectedContent(t *testing.T) {
 		contains string
 	}{
 		{"title", "Installation Complete"},
-		{"fire emoji", "🔥"},
+		{"banner anvil", "║"},
 		{"component config files", "Config files"},
 		{"component skills", "AI skills"},
 		{"component SDD agents", "SDD phase agents"},
@@ -131,7 +131,7 @@ func TestCompleteViewContainsExpectedContent(t *testing.T) {
 		{"start using opencode", "opencode"},
 		{"check status hefesto", "hefesto status"},
 		{"forge on message", "Forge on"},
-		{"exit instruction", "Press q to exit"},
+		{"exit key in help bar", "q"},
 	}
 
 	m := NewCompleteModel("~/.config/opencode/", 80, 40)

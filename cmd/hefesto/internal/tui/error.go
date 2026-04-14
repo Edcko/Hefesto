@@ -5,14 +5,6 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-)
-
-// Colors for the error screen
-var (
-	colorErrorRed      = lipgloss.Color("#FF4444")
-	colorWarningYellow = lipgloss.Color("#EAB308")
-	colorGray          = lipgloss.Color("#666666")
 )
 
 // ErrorAction represents user actions on the error screen
@@ -99,53 +91,21 @@ func (m *ErrorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View implements tea.Model
 func (m *ErrorModel) View() string {
-	// Box dimensions
-	boxWidth := 54
+	width := ResolveContentWidth(m.width)
 
-	// Styles
-	borderStyle := lipgloss.NewStyle().
-		Border(lipgloss.DoubleBorder()).
-		BorderForeground(colorErrorRed).
-		Padding(0, 1)
+	var b strings.Builder
 
-	titleStyle := lipgloss.NewStyle().
-		Foreground(colorErrorRed).
-		Bold(true)
-
-	errorStyle := lipgloss.NewStyle().
-		Foreground(colorErrorRed)
-
-	warningStyle := lipgloss.NewStyle().
-		Foreground(colorWarningYellow)
-
-	checkStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#22C55E"))
-
-	grayStyle := lipgloss.NewStyle().
-		Foreground(colorGray)
-
-	amberStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FF8C00")).
-		Bold(true)
-
-	// Build content lines
-	var lines []string
-
-	// Empty line at top
-	lines = append(lines, "")
-
-	// Title with X emojis
-	title := "    ❌  Installation Failed  ❌    "
-	lines = append(lines, titleStyle.Render(title))
-
-	// Empty line
-	lines = append(lines, "")
+	// Error hero — no border, clean impact
+	b.WriteString(RenderCenteredHero("", "Installation Failed", "Something went wrong during setup", width))
+	b.WriteString(strings.Repeat("\n", SpaceSM))
 
 	// Error details
 	if m.err != nil {
 		// Step
-		stepLine := fmt.Sprintf("  Step: %s", m.err.Step)
-		lines = append(lines, stepLine)
+		stepLabel := CopperText("Step:")
+		stepValue := WhiteText(m.err.Step)
+		b.WriteString(CenterText(fmt.Sprintf("  %s %s", stepLabel, stepValue), width))
+		b.WriteString("\n")
 
 		// Error message
 		errMsg := m.err.Message
@@ -153,74 +113,66 @@ func (m *ErrorModel) View() string {
 			errMsg = fmt.Sprintf("%s: %v", m.err.Message, m.err.Err)
 		}
 		// Wrap long error messages
-		wrapped := wrapText(errMsg, 46)
+		wrapped := wrapText(errMsg, width-8)
 		for _, line := range wrapped {
-			lines = append(lines, "  Error: "+errorStyle.Render(line))
+			b.WriteString(CenterText(RedText("  "+line), width))
+			b.WriteString("\n")
 		}
 	}
 
-	// Empty line
-	lines = append(lines, "")
+	b.WriteString(strings.Repeat("\n", SpaceSM))
 
 	// Suggested fixes
-	lines = append(lines, "  "+warningStyle.Render("Suggested fixes:"))
+	b.WriteString(CenterText(CopperText("Suggested fixes:"), width))
+	b.WriteString("\n")
+
 	fixes := m.getSuggestedFixes()
 	for _, fix := range fixes {
-		lines = append(lines, "    "+fix)
+		b.WriteString(CenterText("  "+GrayText(fix), width))
+		b.WriteString("\n")
 	}
 
-	// Empty line
-	lines = append(lines, "")
+	b.WriteString(strings.Repeat("\n", SpaceSM))
 
-	// Partial installation status (if any steps completed)
+	// Partial installation status
 	if len(m.CompletedSteps) > 0 || len(m.PendingSteps) > 0 {
-		lines = append(lines, "  Partial installation detected:")
+		b.WriteString(CenterText(CopperText("Partial installation status:"), width))
+		b.WriteString("\n")
 
-		// Completed steps
 		for _, step := range m.CompletedSteps {
-			lines = append(lines, "    "+checkStyle.Render("✅")+" "+step)
+			b.WriteString(CenterText(fmt.Sprintf("  %s %s", GreenText(IconCheck), WhiteText(step)), width))
+			b.WriteString("\n")
 		}
 
-		// Failed step
 		if m.FailedStep != "" {
-			lines = append(lines, "    "+errorStyle.Render("❌")+" "+m.FailedStep)
+			b.WriteString(CenterText(fmt.Sprintf("  %s %s", RedText(IconCross), WhiteText(m.FailedStep)), width))
+			b.WriteString("\n")
 		} else if m.err != nil {
-			lines = append(lines, "    "+errorStyle.Render("❌")+" "+m.err.Step)
+			b.WriteString(CenterText(fmt.Sprintf("  %s %s", RedText(IconCross), WhiteText(m.err.Step)), width))
+			b.WriteString("\n")
 		}
 
-		// Pending steps
 		for _, step := range m.PendingSteps {
-			lines = append(lines, "    "+grayStyle.Render("⏳")+" "+grayStyle.Render(step))
+			b.WriteString(CenterText(fmt.Sprintf("  %s %s", DimTextStyle.Render("○"), GrayText(step)), width))
+			b.WriteString("\n")
 		}
 
-		// Empty line
-		lines = append(lines, "")
+		b.WriteString(strings.Repeat("\n", SpaceSM))
 	}
 
-	// Options
-	optionsLine := fmt.Sprintf("  Options: [%s] %s  [%s] %s  [%s] %s",
-		amberStyle.Render("r"), "Retry",
-		amberStyle.Render("u"), "Undo partial install",
-		amberStyle.Render("q"), "Quit")
-	lines = append(lines, optionsLine)
+	// Help bar with options
+	hints := []KeyHint{
+		{Key: "r", Action: "Retry"},
+		{Key: "u", Action: "Undo"},
+		{Key: "q", Action: "Quit"},
+	}
+	b.WriteString(RenderHelpBar(hints, width))
 
-	// Empty line at bottom
-	lines = append(lines, "")
-
-	// Build the box content
-	content := strings.Join(lines, "\n")
-
-	// Apply border
-	box := borderStyle.
-		Width(boxWidth).
-		Render(content)
-
-	// Center the box
-	return lipgloss.NewStyle().
-		Width(m.width).
-		Height(m.height).
-		Align(lipgloss.Center, lipgloss.Center).
-		Render(box)
+	return RenderScreenFrame(b.String(), FrameOptions{
+		Width:  m.width,
+		Height: m.height,
+		Border: BorderRounded,
+	})
 }
 
 // getSuggestedFixes returns context-aware fix suggestions based on the error

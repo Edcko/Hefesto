@@ -147,14 +147,13 @@ func TestWelcomeViewContainsExpectedContent(t *testing.T) {
 		name     string
 		contains string
 	}{
-		{"banner", "🔥"},
+		{"banner", "*"},
 		{"version", "HEFESTO"},
 		{"tagline", "AI Dev Environment Forge"},
 		{"description", "Hefesto will configure your OpenCode environment"},
 		{"install header", "What will be installed"},
-		{"enter prompt", "Press Enter to continue"},
-		{"border", "╔"},
-		{"border bottom", "╚"},
+		{"enter key", "Enter"},
+		{"help bar continue", "Continue"},
 	}
 
 	m := NewWelcomeModel()

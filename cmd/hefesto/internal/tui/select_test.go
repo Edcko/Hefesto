@@ -287,8 +287,7 @@ func TestSelectViewContainsExpectedContent(t *testing.T) {
 		{"Commands item", "Commands"},
 		{"Plugins item", "Plugins"},
 		{"Engram item", "Engram"},
-		{"border top", "╔"},
-		{"border bottom", "╚"},
+		{"border rounded", "╭"},
 	}
 
 	for _, check := range checks {
@@ -324,14 +323,13 @@ func TestSelectViewBordersAligned(t *testing.T) {
 	m := NewSelectModel(80, 40)
 	view := m.View()
 
-	// Every line that contains a left border should also contain a right border
-	// (checked on the rendered output by looking for the border characters)
+	// Every line that contains a rounded border should be properly rendered.
 	lines := strings.Split(view, "\n")
 	for i, line := range lines {
 		plain := stripAnsi(line)
-		// Skip lines without borders (empty, centering whitespace)
-		if !strings.Contains(plain, "╔") && !strings.Contains(plain, "╚") &&
-			!strings.Contains(plain, "║") && !strings.Contains(plain, "│") {
+		// Check for rounded border characters used by lipgloss.RoundedBorder()
+		if !strings.Contains(plain, "╭") && !strings.Contains(plain, "╰") &&
+			!strings.Contains(plain, "│") {
 			continue
 		}
 		// lipgloss border should handle alignment automatically

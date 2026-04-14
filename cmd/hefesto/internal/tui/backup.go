@@ -170,85 +170,140 @@ func (m *BackupModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View implements tea.Model
 func (m *BackupModel) View() string {
-	var b strings.Builder
+	width := ResolveContentWidth(m.width)
 
-	// Title
-	title := TitleStyle.Render("Backup Existing Configuration")
-	b.WriteString(CenterText(title, 60))
-	b.WriteString("\n\n")
-
-	// Status message
-	if m.error != "" {
-		errMsg := ErrorStyle.Render("Backup failed: " + m.error)
-		b.WriteString(CenterText(errMsg, 60))
-		b.WriteString("\n\n")
-	} else if m.complete {
-		success := SuccessStyle.Render(IconCheck + " Backup complete!")
-		b.WriteString(CenterText(success, 60))
-		b.WriteString("\n\n")
-
-		path := MutedStyle.Render("Saved to: " + m.backupPath)
-		b.WriteString(CenterText(path, 60))
-		b.WriteString("\n\n")
-
-		instruction := MutedStyle.Render("Press Enter to continue")
-		b.WriteString(CenterText(instruction, 60))
-		return b.String()
-	} else if m.backingUp {
-		spinnerChar := string(IconSpinner[m.spinner])
-		status := InfoStyle.Render(spinnerChar + " Creating backup...")
-		b.WriteString(CenterText(status, 60))
-		b.WriteString("\n\n")
-
-		// Show items being backed up
-		for _, item := range m.backupItems {
-			line := fmt.Sprintf("  %s %s", MutedStyle.Render(IconBullet), BodyStyle.Render(item))
-			b.WriteString(CenterText(line, 60))
-			b.WriteString("\n")
-		}
-		return b.String()
+	// Wizard progress: Welcome → Detect → Select → [Backup] → Install → Complete
+	wizardSteps := []WizardStep{
+		{Label: "Welcome", Done: true},
+		{Label: "Detect", Done: true},
+		{Label: "Select", Done: true},
+		{Label: "Backup", Active: true},
+		{Label: "Install"},
+		{Label: "Complete"},
 	}
 
-	// Confirmation UI
-	desc := BodyStyle.Render("An existing configuration was found.")
-	b.WriteString(CenterText(desc, 60))
-	b.WriteString("\n\n")
+	var b strings.Builder
 
-	backupPath := MutedStyle.Render("Backup location: " + m.backupPath)
-	b.WriteString(CenterText(backupPath, 60))
-	b.WriteString("\n\n")
+	// Wizard progress indicator
+	b.WriteString(RenderWizardProgress(wizardSteps, width))
+	b.WriteString(strings.Repeat("\n", SpaceSM))
 
-	// Items to backup
-	itemsTitle := SubtitleStyle.Render("Items to backup:")
-	b.WriteString(CenterText(itemsTitle, 60))
+	// Section title
+	b.WriteString(RenderSectionTitle("Backup Configuration", width))
+	b.WriteString(strings.Repeat("\n", SpaceSM))
+
+	// Content area
+	if m.error != "" {
+		m.renderError(&b, width)
+	} else if m.complete {
+		m.renderComplete(&b, width)
+	} else if m.backingUp {
+		m.renderProgress(&b, width)
+	} else {
+		m.renderConfirmation(&b, width)
+	}
+
+	// Help bar
+	hints := m.getHelpHints()
+	if len(hints) > 0 {
+		b.WriteString(strings.Repeat("\n", SpaceSM))
+		b.WriteString(RenderHelpBar(hints, width))
+	}
+
+	return RenderScreenFrame(b.String(), FrameOptions{
+		Width:  m.width,
+		Height: m.height,
+		Border: BorderRounded,
+	})
+}
+
+// renderConfirmation renders the Yes/No backup confirmation
+func (m *BackupModel) renderConfirmation(b *strings.Builder, width int) {
+	desc := WhiteText("An existing configuration was found.")
+	b.WriteString(CenterText(desc, width))
+	b.WriteString(strings.Repeat("\n", SpaceSM))
+
+	backupPath := GrayText("Backup location: " + m.backupPath)
+	b.WriteString(CenterText(backupPath, width))
+	b.WriteString(strings.Repeat("\n", SpaceMD))
+
+	// Items section header
+	itemsHeader := CopperText("Items to backup:")
+	b.WriteString(CenterText(itemsHeader, width))
 	b.WriteString("\n")
 
 	for _, item := range m.backupItems {
-		line := fmt.Sprintf("  %s %s", MutedStyle.Render(IconBullet), BodyStyle.Render(item))
-		b.WriteString(CenterText(line, 60))
+		b.WriteString(CenterText(BulletItem(WhiteText(item)), width))
 		b.WriteString("\n")
 	}
-	b.WriteString("\n")
+	b.WriteString(strings.Repeat("\n", SpaceMD))
 
 	// Yes/No selection
 	yesStyle := MutedStyle
 	noStyle := MutedStyle
 
 	if m.selected == 0 {
-		yesStyle = BoldStyle.Foreground(Primary)
+		yesStyle = BoldStyle.Foreground(ColorAmber)
 	} else {
-		noStyle = BoldStyle.Foreground(Primary)
+		noStyle = BoldStyle.Foreground(ColorAmber)
 	}
 
 	yes := yesStyle.Render("[ Yes ]")
 	no := noStyle.Render("[ No ]")
 
 	selection := fmt.Sprintf("      %s        %s", yes, no)
-	b.WriteString(CenterText(selection, 60))
-	b.WriteString("\n\n")
+	b.WriteString(CenterText(selection, width))
+}
 
-	hint := MutedStyle.Render("← → to select, Enter to confirm")
-	b.WriteString(CenterText(hint, 60))
+// renderProgress renders the backup-in-progress state
+func (m *BackupModel) renderProgress(b *strings.Builder, width int) {
+	spinnerChar := string(IconSpinner[m.spinner])
+	status := AmberText(spinnerChar + " Creating backup...")
+	b.WriteString(CenterText(status, width))
+	b.WriteString(strings.Repeat("\n", SpaceSM))
 
-	return b.String()
+	for _, item := range m.backupItems {
+		b.WriteString(CenterText(BulletItem(WhiteText(item)), width))
+		b.WriteString("\n")
+	}
+}
+
+// renderComplete renders the backup-success state
+func (m *BackupModel) renderComplete(b *strings.Builder, width int) {
+	success := GreenText(IconCheck + " Backup complete!")
+	b.WriteString(CenterText(success, width))
+	b.WriteString(strings.Repeat("\n", SpaceSM))
+
+	path := GrayText("Saved to: " + m.backupPath)
+	b.WriteString(CenterText(path, width))
+	b.WriteString(strings.Repeat("\n", SpaceSM))
+
+	instruction := MutedStyle.Render("Press Enter to continue")
+	b.WriteString(CenterText(instruction, width))
+}
+
+// renderError renders the backup-error state
+func (m *BackupModel) renderError(b *strings.Builder, width int) {
+	errMsg := RedText(IconCross + " Backup failed: " + m.error)
+	b.WriteString(CenterText(errMsg, width))
+	b.WriteString(strings.Repeat("\n", SpaceSM))
+
+	instruction := MutedStyle.Render("Press Enter to continue")
+	b.WriteString(CenterText(instruction, width))
+}
+
+// getHelpHints returns context-sensitive key hints
+func (m *BackupModel) getHelpHints() []KeyHint {
+	if m.confirming {
+		return []KeyHint{
+			{Key: "← →", Action: "Select"},
+			{Key: "Enter", Action: "Confirm"},
+		}
+	}
+	if m.complete || m.error != "" {
+		return []KeyHint{
+			{Key: "Enter", Action: "Continue"},
+		}
+	}
+	return nil
 }

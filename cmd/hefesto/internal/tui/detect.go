@@ -7,12 +7,11 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 
 	"github.com/Edcko/Hefesto/cmd/hefesto/internal/install"
 )
 
-// DetectModel is the environment detection screen
+// DetectModel is the environment detection screen.
 type DetectModel struct {
 	width  int
 	height int
@@ -25,7 +24,7 @@ type DetectModel struct {
 	results []DetectResult
 }
 
-// DetectResult represents a single detection result
+// DetectResult represents a single detection result.
 type DetectResult struct {
 	Name     string
 	Found    bool
@@ -33,12 +32,12 @@ type DetectResult struct {
 	Checking bool
 }
 
-// DetectCompleteMsg signals detection is complete
+// DetectCompleteMsg signals detection is complete.
 type DetectCompleteMsg struct {
 	Results []DetectResult
 }
 
-// NewDetectModel creates a new detection screen
+// NewDetectModel creates a new detection screen.
 func NewDetectModel(width, height int) *DetectModel {
 	return &DetectModel{
 		width:     width,
@@ -53,7 +52,7 @@ func NewDetectModel(width, height int) *DetectModel {
 	}
 }
 
-// Init implements tea.Model
+// Init implements tea.Model.
 func (m *DetectModel) Init() tea.Cmd {
 	return tea.Batch(
 		Tick(100*time.Millisecond),
@@ -122,7 +121,7 @@ func (m *DetectModel) runDetection() tea.Cmd {
 	}
 }
 
-// Update implements tea.Model
+// Update implements tea.Model.
 func (m *DetectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -146,7 +145,6 @@ func (m *DetectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "enter", " ":
 			if !m.detecting {
-				// Always go to component selection after detection
 				return m, TransitionTo(ScreenComponentSelect)
 			}
 		}
@@ -155,63 +153,94 @@ func (m *DetectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// View implements tea.Model
-func (m *DetectModel) View() string {
-	var b strings.Builder
-
-	// Title
-	title := TitleStyle.Render("Environment Detection")
-	b.WriteString(CenterText(title, 60))
-	b.WriteString("\n\n")
-
-	// Status
-	if m.detecting {
-		spinnerChar := string(IconSpinner[m.spinner])
-		status := InfoStyle.Render(spinnerChar + " Detecting environment...")
-		b.WriteString(CenterText(status, 60))
-	} else {
-		status := SuccessStyle.Render(IconCheck + " Detection complete")
-		b.WriteString(CenterText(status, 60))
+// wizardSteps returns the wizard progress steps for the detect screen.
+func (m *DetectModel) wizardSteps() []WizardStep {
+	return []WizardStep{
+		{Label: "Welcome", Done: true},
+		{Label: "Detect", Active: true},
+		{Label: "Select"},
+		{Label: "Install"},
 	}
-	b.WriteString("\n\n")
-
-	// Results
-	for _, result := range m.results {
-		b.WriteString(m.renderResult(result))
-		b.WriteString("\n")
-	}
-
-	b.WriteString("\n")
-
-	// Instructions
-	if !m.detecting {
-		instruction := MutedStyle.Render("Press Enter to continue")
-		b.WriteString(CenterText(instruction, 60))
-	}
-
-	return b.String()
 }
 
-// renderResult renders a single detection result
-func (m *DetectModel) renderResult(result DetectResult) string {
+// View implements tea.Model.
+func (m *DetectModel) View() string {
+	width := ResolveContentWidth(m.width)
+
+	// ===== Wizard progress indicator =====
+	progress := RenderWizardProgress(m.wizardSteps(), width)
+
+	// ===== Section title =====
+	title := RenderSectionTitle("Environment Detection", width)
+
+	// ===== Status line =====
+	var statusLine string
+	if m.detecting {
+		spinnerChar := string(IconSpinner[m.spinner])
+		statusLine = CenterText(AmberText(spinnerChar+" Detecting environment..."), width)
+	} else {
+		statusLine = CenterText(GreenText(IconCheck+" Detection complete"), width)
+	}
+
+	// ===== Results =====
+	var resultLines strings.Builder
+	for _, result := range m.results {
+		resultLines.WriteString(m.renderResult(result, width))
+		resultLines.WriteString("\n")
+	}
+
+	// ===== Help bar =====
+	var helpBar string
+	if !m.detecting {
+		helpBar = RenderHelpBar([]KeyHint{
+			{Key: "Enter", Action: "Continue"},
+			{Key: "Esc", Action: "Back"},
+		}, width)
+	}
+
+	// ===== Assemble with spacing rhythm =====
+	var b strings.Builder
+	b.WriteString(progress)
+	b.WriteString("\n")
+	b.WriteString(title)
+	b.WriteString(strings.Repeat("\n", SpaceSM))
+	b.WriteString(statusLine)
+	b.WriteString(strings.Repeat("\n", SpaceSM))
+	b.WriteString(resultLines.String())
+
+	if helpBar != "" {
+		b.WriteString(strings.Repeat("\n", SpaceSM))
+		b.WriteString(helpBar)
+	}
+
+	content := b.String()
+
+	// Wrap in rounded border frame, centered in terminal.
+	return RenderScreenFrame(content, FrameOptions{
+		Width:  width,
+		Height: m.height,
+		Border: BorderRounded,
+	})
+}
+
+// renderResult renders a single detection result line.
+func (m *DetectModel) renderResult(result DetectResult, width int) string {
 	var icon string
-	var style lipgloss.Style
+	var styledName string
 
 	if result.Checking {
 		spinnerChar := string(IconSpinner[m.spinner])
-		icon = spinnerChar
-		style = InfoStyle
+		icon = AmberText(spinnerChar)
+		styledName = WhiteText(result.Name)
 	} else if result.Found {
-		icon = IconCheck
-		style = SuccessStyle
+		icon = GreenText(IconCheck)
+		styledName = WhiteText(result.Name)
 	} else {
-		icon = IconBullet
-		style = MutedStyle
+		icon = GrayText(IconBullet)
+		styledName = GrayText(result.Name)
 	}
 
-	name := BodyStyle.Render(result.Name)
 	details := MutedStyle.Render(result.Details)
-
-	line := fmt.Sprintf("  %s %-20s %s", style.Render(icon), name, details)
-	return CenterText(line, 60)
+	line := fmt.Sprintf("  %s %-20s %s", icon, styledName, details)
+	return CenterText(line, width)
 }
