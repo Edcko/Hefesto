@@ -91,7 +91,7 @@ func (m *WelcomeModel) View() string {
 
 	// Center in terminal — splash screen, no border.
 	return RenderScreenFrame(content, FrameOptions{
-		Width:  width,
+		Width:  m.width,
 		Height: m.height,
 		Border: BorderNone,
 	})

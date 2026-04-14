@@ -217,7 +217,7 @@ func (m *DetectModel) View() string {
 
 	// Wrap in rounded border frame, centered in terminal.
 	return RenderScreenFrame(content, FrameOptions{
-		Width:  width,
+		Width:  m.width,
 		Height: m.height,
 		Border: BorderRounded,
 	})
