@@ -136,23 +136,27 @@ func TestSelectUpdateUpFromContinueGoesToLastItem(t *testing.T) {
 
 func TestSelectUpdateSpaceToggleNonRequired(t *testing.T) {
 	m := NewSelectModel(80, 40)
-	// Skills is index 2, non-required, selected by default
-	m.cursor = 2
+	// With the new component list:
+	// 0: OpenCode CLI (required when not installed)
+	// 1: AGENTS.md (required)
+	// 2: opencode.json (required)
+	// 3: Skills (non-required, selected by default)
+	m.cursor = 3
 
-	if !m.items.Items[2].Selected {
+	if !m.items.Items[3].Selected {
 		t.Fatal("Skills should be selected by default")
 	}
 
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeySpace})
 	m2, _ := updated.(*SelectModel)
-	if m2.items.Items[2].Selected {
+	if m2.items.Items[3].Selected {
 		t.Error("Skills should be deselected after Space")
 	}
 
 	// Toggle back
 	updated, _ = m2.Update(tea.KeyMsg{Type: tea.KeySpace})
 	m3, _ := updated.(*SelectModel)
-	if !m3.items.Items[2].Selected {
+	if !m3.items.Items[3].Selected {
 		t.Error("Skills should be selected again after Space")
 	}
 }
@@ -174,11 +178,11 @@ func TestSelectUpdateSpaceDoesNotToggleRequired(t *testing.T) {
 
 func TestSelectUpdateEnterToggleNonRequired(t *testing.T) {
 	m := NewSelectModel(80, 40)
-	m.cursor = 3 // Theme, non-required
+	m.cursor = 4 // Theme, non-required (index shifted due to OpenCode CLI at 0)
 
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m2, _ := updated.(*SelectModel)
-	if m2.items.Items[3].Selected {
+	if m2.items.Items[4].Selected {
 		t.Error("Theme should be deselected after Enter")
 	}
 }
@@ -382,7 +386,8 @@ func TestDefaultComponentSelection(t *testing.T) {
 		}
 	}
 
-	requiredNames := map[string]bool{"AGENTS.md": true, "opencode.json": true}
+	// Required items: OpenCode CLI (not installed by default), AGENTS.md, opencode.json
+	requiredNames := map[string]bool{"OpenCode CLI": true, "AGENTS.md": true, "opencode.json": true}
 	for _, item := range sel.Items {
 		_, isRequired := requiredNames[item.Name]
 		if item.Required != isRequired {

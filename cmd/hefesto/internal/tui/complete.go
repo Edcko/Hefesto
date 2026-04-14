@@ -20,6 +20,12 @@ type CompleteModel struct {
 
 	// InstalledComponents tracks what was installed
 	InstalledComponents []InstalledComponent
+
+	// OpenCode CLI install status from the install screen
+	OpenCodeInstallAttempted bool
+	OpenCodeInstallSuccess   bool
+	OpenCodeInstallVersion   string
+	OpenCodeInstallError     string
 }
 
 // InstalledComponent represents an installed item
@@ -98,6 +104,20 @@ func (m *CompleteModel) View() string {
 	b.WriteString(strings.Repeat("\n", SpaceXS))
 
 	// Next steps — compact single-line format
+	if m.OpenCodeInstallAttempted && m.OpenCodeInstallSuccess {
+		versionInfo := ""
+		if m.OpenCodeInstallVersion != "" {
+			versionInfo = fmt.Sprintf(" v%s", m.OpenCodeInstallVersion)
+		}
+		b.WriteString(CenterText(GreenText(fmt.Sprintf("%s OpenCode CLI installed%s", IconCheck, versionInfo)), width))
+		b.WriteString("\n")
+	}
+
+	if m.OpenCodeInstallAttempted && !m.OpenCodeInstallSuccess && m.OpenCodeInstallError != "" {
+		b.WriteString(CenterText(AmberText("Install OpenCode: curl -fsSL https://opencode.ai/install | bash"), width))
+		b.WriteString("\n")
+	}
+
 	b.WriteString(CenterText(CopperText("Run")+AmberText(" $ opencode")+CopperText(" to start"), width))
 	b.WriteString("\n")
 	b.WriteString(CenterText(CopperText("Run")+AmberText(" $ hefesto status")+CopperText(" to check"), width))

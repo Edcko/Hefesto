@@ -824,7 +824,7 @@ func buildFixSuggestion(checkName string) string {
 	case "Engram":
 		return "Install engram with: brew install engram"
 	case "OpenCode":
-		return "Install opencode CLI"
+		return "Install opencode CLI: curl -fsSL https://opencode.ai/install | bash\nOr visit: https://opencode.ai for more options"
 	case "Theme":
 		return "Run `hefesto install` to deploy theme files"
 	case "Personality":

@@ -82,7 +82,22 @@ func Detect() (*Environment, error) {
 		}
 		logger.Debug("detect: opencode found at %s (version %s)", env.OpenCodePath, env.OpenCodeVersion)
 	} else {
-		logger.Debug("detect: opencode not found in PATH")
+		// Fallback: check ~/.opencode/bin/opencode — the official installer puts it there
+		// but it may not be in PATH yet.
+		fallbackPath := GetOpenCodeInstallPath()
+		if info, statErr := os.Stat(fallbackPath); statErr == nil && !info.IsDir() {
+			env.OpenCodeInstalled = true
+			env.OpenCodePath = fallbackPath
+
+			// Get version from the fallback binary
+			cmd := exec.CommandContext(ctx, fallbackPath, "--version") //nolint:gosec // G702: controlled binary path
+			if out, cmdErr := cmd.Output(); cmdErr == nil {
+				env.OpenCodeVersion = parseOpenCodeVersionOutput(string(out))
+			}
+			logger.Debug("detect: opencode found at fallback %s (version %s)", env.OpenCodePath, env.OpenCodeVersion)
+		} else {
+			logger.Debug("detect: opencode not found in PATH or ~/.opencode/bin/")
+		}
 	}
 
 	// Check if engram is installed

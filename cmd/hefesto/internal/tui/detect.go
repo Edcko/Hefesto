@@ -75,12 +75,12 @@ func (m *DetectModel) runDetection() tea.Cmd {
 		} else if env.OpenCodeInstalled {
 			results[0].Found = true
 			if env.OpenCodeVersion != "" {
-				results[0].Details = fmt.Sprintf("Installed (%s)", env.OpenCodeVersion)
+				results[0].Details = fmt.Sprintf("v%s ✓", env.OpenCodeVersion)
 			} else {
-				results[0].Details = "Installed (version unknown)"
+				results[0].Details = "Installed (version unknown) ✓"
 			}
 		} else {
-			results[0].Details = "Not found (will be configured)"
+			results[0].Details = "Not found (will install)"
 		}
 
 		// Detect config directory
@@ -226,19 +226,23 @@ func (m *DetectModel) View() string {
 func (m *DetectModel) renderResult(result DetectResult, width int) string {
 	var icon string
 	var styledName string
+	var details string
 
 	if result.Checking {
 		icon = AmberText(SpinnerFrames[m.spinner])
 		styledName = WhiteText(result.Name)
+		details = MutedStyle.Render(result.Details)
 	} else if result.Found {
 		icon = GreenText(IconCheck)
 		styledName = WhiteText(result.Name)
+		details = GreenText(result.Details)
 	} else {
-		icon = GrayText(IconBullet)
-		styledName = GrayText(result.Name)
+		// Not found — use amber to draw attention (action will be taken)
+		icon = AmberText(IconBullet)
+		styledName = AmberText(result.Name)
+		details = AmberText(result.Details)
 	}
 
-	details := MutedStyle.Render(result.Details)
 	line := fmt.Sprintf("  %s %-20s %s", icon, styledName, details)
 	return CenterText(line, width)
 }

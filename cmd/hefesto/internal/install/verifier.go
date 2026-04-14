@@ -97,6 +97,22 @@ func verifyOpenCodeWorks(result *VerifyResult) bool {
 
 	cmd := exec.CommandContext(ctx, "opencode", "--version")
 	if err := cmd.Run(); err != nil {
+		// Try fallback location: ~/.opencode/bin/opencode
+		installPath := GetOpenCodeInstallPath()
+		if _, statErr := os.Stat(installPath); statErr == nil {
+			fallbackCmd := exec.CommandContext(ctx, installPath, "--version") //nolint:gosec // G702: controlled binary path
+			if fallbackErr := fallbackCmd.Run(); fallbackErr == nil {
+				// Binary exists at fallback but not in PATH — suggest adding it
+				shellRC := getShellRCFile(func() string {
+					h, _ := getUserHomeDir()
+					return h
+				}())
+				result.Errors = append(result.Errors,
+					fmt.Sprintf("opencode installed at %s but not in PATH. Add it by running: echo 'export PATH=\"$HOME/.opencode/bin:$PATH\"' >> %s", installPath, shellRC))
+				return false
+			}
+		}
+
 		result.Errors = append(result.Errors, fmt.Sprintf("opencode CLI not working: %v", err))
 		return false
 	}

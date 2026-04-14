@@ -15,12 +15,13 @@ import (
 type Step string
 
 const (
-	StepDetect Step = "detect"
-	StepBackup Step = "backup"
-	StepCopy   Step = "copy"
-	StepEngram Step = "engram"
-	StepNpm    Step = "npm"
-	StepVerify Step = "verify"
+	StepDetect   Step = "detect"
+	StepBackup   Step = "backup"
+	StepCopy     Step = "copy"
+	StepOpenCode Step = "opencode"
+	StepEngram   Step = "engram"
+	StepNpm      Step = "npm"
+	StepVerify   Step = "verify"
 )
 
 // InstallProgress represents progress updates during installation.
@@ -110,7 +111,52 @@ func (i *Installer) Run() error {
 		}
 	}
 
-	// Step 3: Copy embedded config
+	// Step 3: Install OpenCode CLI if not present
+	i.Progress <- InstallProgress{
+		Step:    StepOpenCode,
+		Message: "Checking OpenCode CLI...",
+		Done:    false,
+	}
+
+	if !i.dryRun {
+		if !i.env.OpenCodeInstalled {
+			i.Progress <- InstallProgress{
+				Step:    StepOpenCode,
+				Message: "Installing OpenCode CLI...",
+				Done:    false,
+			}
+
+			version, err := InstallOpenCode()
+			if err != nil {
+				// OpenCode install failure is not fatal - config can be deployed without it
+				i.Progress <- InstallProgress{
+					Step:    StepOpenCode,
+					Message: fmt.Sprintf("OpenCode install failed (non-fatal): %v", err),
+					Done:    true,
+				}
+			} else {
+				i.Progress <- InstallProgress{
+					Step:    StepOpenCode,
+					Message: fmt.Sprintf("OpenCode CLI v%s installed ✓", version),
+					Done:    true,
+				}
+			}
+		} else {
+			i.Progress <- InstallProgress{
+				Step:    StepOpenCode,
+				Message: fmt.Sprintf("OpenCode CLI already installed: %s", i.env.OpenCodeVersion),
+				Done:    true,
+			}
+		}
+	} else {
+		i.Progress <- InstallProgress{
+			Step:    StepOpenCode,
+			Message: "OpenCode install skipped (dry run)",
+			Done:    true,
+		}
+	}
+
+	// Step 4: Copy embedded config
 	i.Progress <- InstallProgress{
 		Step:    StepCopy,
 		Message: "Copying Hefesto configuration...",
@@ -136,7 +182,7 @@ func (i *Installer) Run() error {
 		Done:    true,
 	}
 
-	// Step 4: Install Engram if not present
+	// Step 5: Install Engram if not present
 	i.Progress <- InstallProgress{
 		Step:    StepEngram,
 		Message: "Checking Engram installation...",
@@ -184,7 +230,7 @@ func (i *Installer) Run() error {
 		}
 	}
 
-	// Step 5: Run npm install
+	// Step 6: Run npm install
 	i.Progress <- InstallProgress{
 		Step:    StepNpm,
 		Message: "Running npm install...",
@@ -215,7 +261,7 @@ func (i *Installer) Run() error {
 		}
 	}
 
-	// Step 6: Verify installation
+	// Step 7: Verify installation
 	i.Progress <- InstallProgress{
 		Step:    StepVerify,
 		Message: "Verifying installation...",
@@ -260,7 +306,7 @@ func (i *Installer) Run() error {
 		}
 	}
 
-	// Step 7: Cleanup old backups
+	// Step 8: Cleanup old backups
 	if !i.dryRun {
 		if err := CleanOldBackups(); err != nil {
 			// Backup cleanup failure is non-fatal

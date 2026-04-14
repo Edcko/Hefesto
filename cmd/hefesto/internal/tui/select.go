@@ -12,6 +12,7 @@ import (
 type ComponentID string
 
 const (
+	ComponentOpenCodeCLI ComponentID = "opencode-cli"
 	ComponentAgents      ComponentID = "agents"
 	ComponentOpenCode    ComponentID = "opencode"
 	ComponentSkills      ComponentID = "skills"
@@ -29,6 +30,7 @@ type ComponentItem struct {
 	Description string
 	Selected    bool
 	Required    bool // If true, item cannot be deselected
+	Installed   bool // If true, item is already present on the system
 }
 
 // ComponentSelection holds the user's component choices.
@@ -47,9 +49,45 @@ func (cs *ComponentSelection) IsSelected(id ComponentID) bool {
 }
 
 // DefaultComponentSelection returns all components selected (opinionated defaults).
+// OpenCode CLI is included based on whether it's already installed.
 func DefaultComponentSelection() *ComponentSelection {
+	return DefaultComponentSelectionWithState(false, "")
+}
+
+// DefaultComponentSelectionWithState returns components with awareness of the
+// current OpenCode CLI installation state.
+//   - openCodeInstalled: if true, OpenCode CLI is present (optional reinstall)
+//   - openCodeVersion: version string if installed, empty otherwise
+func DefaultComponentSelectionWithState(openCodeInstalled bool, openCodeVersion string) *ComponentSelection {
+	// Determine OpenCode CLI item based on install state
+	var cliItem ComponentItem
+	if openCodeInstalled {
+		label := "OpenCode CLI"
+		if openCodeVersion != "" {
+			label = fmt.Sprintf("OpenCode CLI (%s)", openCodeVersion)
+		}
+		cliItem = ComponentItem{
+			ID:          ComponentOpenCodeCLI,
+			Name:        label,
+			Description: "already installed",
+			Selected:    false, // Optional reinstall/update
+			Required:    false,
+			Installed:   true,
+		}
+	} else {
+		cliItem = ComponentItem{
+			ID:          ComponentOpenCodeCLI,
+			Name:        "OpenCode CLI",
+			Description: "will install",
+			Selected:    true, // Auto-selected
+			Required:    true, // Cannot be deselected
+			Installed:   false,
+		}
+	}
+
 	return &ComponentSelection{
 		Items: []ComponentItem{
+			cliItem,
 			{
 				ID:          ComponentAgents,
 				Name:        "AGENTS.md",
@@ -124,10 +162,16 @@ type SelectModel struct {
 
 // NewSelectModel creates a new component selection screen.
 func NewSelectModel(width, height int) *SelectModel {
+	return NewSelectModelWithState(width, height, false, "")
+}
+
+// NewSelectModelWithState creates a component selection screen aware of the
+// current OpenCode CLI installation state.
+func NewSelectModelWithState(width, height int, openCodeInstalled bool, openCodeVersion string) *SelectModel {
 	return &SelectModel{
 		width:  width,
 		height: height,
-		items:  DefaultComponentSelection(),
+		items:  DefaultComponentSelectionWithState(openCodeInstalled, openCodeVersion),
 	}
 }
 
@@ -331,7 +375,16 @@ func (m *SelectModel) renderItemLine(index int, item ComponentItem, innerWidth i
 		nameText = WhiteText(item.Name)
 	}
 
-	descText := MutedStyle.Render(item.Description)
+	// Description styling: installed items get green, "will install" gets amber
+	var descText string
+	if item.Installed {
+		descText = GreenText(item.Description)
+	} else if item.Required && !item.Installed {
+		descText = AmberText(item.Description)
+	} else {
+		descText = MutedStyle.Render(item.Description)
+	}
+
 	displayText := fmt.Sprintf("%s %s", nameText, descText)
 
 	// Truncate if wider than available space

@@ -318,7 +318,7 @@ func (a *App) handleScreenTransition(msg ScreenTransitionMsg) (tea.Model, tea.Cm
 		return a, a.detect.Init()
 
 	case ScreenComponentSelect:
-		a.select_ = NewSelectModel(a.width, a.height)
+		a.select_ = NewSelectModelWithState(a.width, a.height, a.openCodeInstalled, a.openCodeVersion)
 		a.screen = ScreenComponentSelect
 		return a, a.select_.Init()
 
@@ -354,7 +354,18 @@ func (a *App) handleScreenTransition(msg ScreenTransitionMsg) (tea.Model, tea.Cm
 		return a, a.install.Init()
 
 	case ScreenComplete:
-		a.complete = NewCompleteModel(a.configPath, a.width, a.height)
+		complete := NewCompleteModel(a.configPath, a.width, a.height)
+
+		// Pass OpenCode CLI install tracking from install screen
+		if a.install != nil {
+			attempted, success, version, errMsg := a.install.GetOpenCodeInstallStatus()
+			complete.OpenCodeInstallAttempted = attempted
+			complete.OpenCodeInstallSuccess = success
+			complete.OpenCodeInstallVersion = version
+			complete.OpenCodeInstallError = errMsg
+		}
+
+		a.complete = complete
 		a.screen = ScreenComplete
 		return a, a.complete.Init()
 	}

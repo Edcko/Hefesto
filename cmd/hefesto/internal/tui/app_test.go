@@ -501,9 +501,10 @@ func TestAppInstallTransitionWithDefaultSelection(t *testing.T) {
 		t.Error("install steps are empty, expected default steps")
 	}
 
-	// First step should always be "Detect environment"
-	if appModel.install.steps[0].Name != "Detect environment" {
-		t.Errorf("first step = %q, want 'Detect environment'", appModel.install.steps[0].Name)
+	// First step should be "Install OpenCode CLI" (auto-selected when not installed)
+	// because DefaultComponentSelection includes it as required when OpenCode is not installed
+	if appModel.install.steps[0].Name != "Install OpenCode CLI" {
+		t.Errorf("first step = %q, want 'Install OpenCode CLI'", appModel.install.steps[0].Name)
 	}
 
 	if cmd == nil {

@@ -70,6 +70,12 @@ type InstallModel struct {
 
 	// Installation results for final report
 	verifyResult *install.VerifyResult
+
+	// OpenCode CLI install tracking for the complete screen
+	openCodeInstallAttempted bool   // Whether we attempted to install OpenCode CLI
+	openCodeInstallSuccess   bool   // Whether the install succeeded
+	openCodeInstallVersion   string // Version that was installed (or detected)
+	openCodeInstallError     string // Error message if install failed
 }
 
 // StepCompleteMsg signals a step has completed
@@ -78,6 +84,15 @@ type StepCompleteMsg struct {
 	Success bool
 	Message string
 	Error   error
+}
+
+// OpenCodeInstallResultMsg carries OpenCode CLI install status from the step
+// runner back to the Update loop, without blocking the install flow.
+type OpenCodeInstallResultMsg struct {
+	Attempted bool
+	Success   bool
+	Version   string
+	Error     string
 }
 
 // StepProgressMsg signals progress update during a step
@@ -99,9 +114,14 @@ func NewInstallModel(configPath, backupPath string, existingConfig bool, selecti
 	}
 
 	// Build steps based on component selection
-	steps := []InstallStep{
-		{Name: "Detect environment", Status: StepPending},
+	steps := []InstallStep{}
+
+	// OpenCode CLI install step — first, before anything else
+	if selection.IsSelected(ComponentOpenCodeCLI) {
+		steps = append(steps, InstallStep{Name: "Install OpenCode CLI", Status: StepPending})
 	}
+
+	steps = append(steps, InstallStep{Name: "Detect environment", Status: StepPending})
 
 	if existingConfig {
 		steps = append(steps, InstallStep{Name: "Backup existing config", Status: StepPending})
@@ -144,6 +164,12 @@ func (m *InstallModel) Init() tea.Cmd {
 	)
 }
 
+// GetOpenCodeInstallStatus returns the OpenCode CLI install tracking state
+// so the complete screen can show the appropriate message.
+func (m *InstallModel) GetOpenCodeInstallStatus() (attempted, success bool, version, errMsg string) {
+	return m.openCodeInstallAttempted, m.openCodeInstallSuccess, m.openCodeInstallVersion, m.openCodeInstallError
+}
+
 // runStep executes a single installation step
 func (m *InstallModel) runStep(index int) tea.Cmd {
 	return func() tea.Msg {
@@ -154,6 +180,27 @@ func (m *InstallModel) runStep(index int) tea.Cmd {
 		stepName := m.steps[index].Name
 
 		switch stepName {
+		case "Install OpenCode CLI":
+			m.steps[index].StartTime = time.Now()
+
+			// Check if already installed before attempting install
+			env, detectErr := install.Detect()
+			if detectErr != nil {
+				// Non-fatal — continue even if detection fails
+				message = fmt.Sprintf("OpenCode CLI detection failed: %v (skipped)", detectErr)
+			} else if env.OpenCodeInstalled {
+				message = fmt.Sprintf("OpenCode CLI already installed (%s)", env.OpenCodeVersion)
+			} else {
+				// Call the install function from the install package
+				installedVersion, installErr := install.InstallOpenCode()
+				if installErr != nil {
+					// Non-fatal — continue even if install fails, config can still be copied
+					message = fmt.Sprintf("OpenCode CLI install failed (non-fatal): %v", installErr)
+				} else {
+					message = fmt.Sprintf("OpenCode CLI %s installed", installedVersion)
+				}
+			}
+
 		case "Detect environment":
 			m.steps[index].StartTime = time.Now()
 			env, detectErr := install.Detect()
@@ -308,6 +355,22 @@ func (m *InstallModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.steps[msg.Index].Message = msg.Message
 			m.steps[msg.Index].EndTime = time.Now()
 			m.steps[msg.Index].Progress = 1.0
+
+			// Track OpenCode CLI install results for the complete screen
+			if msg.Index < len(m.steps) && m.steps[msg.Index].Name == "Install OpenCode CLI" {
+				m.openCodeInstallAttempted = true
+				// Parse result from message
+				if containsStr(msg.Message, "installed") && !containsStr(msg.Message, "failed") {
+					m.openCodeInstallSuccess = true
+				}
+				// Extract version if present
+				if v := extractVersionFromMsg(msg.Message); v != "" {
+					m.openCodeInstallVersion = v
+				}
+				if containsStr(msg.Message, "failed") {
+					m.openCodeInstallError = msg.Message
+				}
+			}
 
 			// Move to next step
 			m.current++
@@ -470,6 +533,8 @@ func (m *InstallModel) getCurrentDetail() string {
 
 	// Return step-specific detail based on name
 	switch step.Name {
+	case "Install OpenCode CLI":
+		return "Downloading and installing OpenCode CLI..."
 	case "Detect environment":
 		return "Detecting system environment..."
 	case "Backup existing config":
@@ -520,4 +585,44 @@ func expandHomePath(path string) string {
 		return filepath.Join(homeDir, strings.TrimPrefix(path, "~/"))
 	}
 	return path
+}
+
+// containsStr checks if a string contains a substring (case-sensitive).
+func containsStr(s, substr string) bool {
+	return strings.Contains(s, substr)
+}
+
+// extractVersionFromMsg attempts to extract a version string from an install
+// step message. Looks for patterns like "v1.2.3" or "1.2.3".
+func extractVersionFromMsg(msg string) string {
+	// Simple heuristic: look for version-like patterns in the message
+	// e.g. "OpenCode CLI 1.4.3 installed" → "1.4.3"
+	// e.g. "OpenCode CLI already installed (1.4.3)" → "1.4.3"
+	parts := strings.Split(msg, " ")
+	for _, part := range parts {
+		// Match version-like strings (e.g., "1.4.3", "v1.4.3")
+		cleaned := strings.TrimPrefix(part, "v")
+		cleaned = strings.TrimRight(cleaned, ")")
+		cleaned = strings.TrimLeft(cleaned, "(")
+		if isVersionLike(cleaned) {
+			return cleaned
+		}
+	}
+	return ""
+}
+
+// isVersionLike returns true if the string looks like a semver version.
+func isVersionLike(s string) bool {
+	if len(s) < 3 {
+		return false
+	}
+	dots := 0
+	for _, r := range s {
+		if r == '.' {
+			dots++
+		} else if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return dots >= 1
 }
