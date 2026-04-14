@@ -91,33 +91,35 @@ func verifyPluginModule(configPath string, result *VerifyResult) bool {
 }
 
 // verifyOpenCodeWorks checks that opencode CLI is still functional.
+// It tries the PATH first, then falls back to the known install location.
+// If the binary works at the fallback location but isn't in PATH, it still
+// returns true — the user just needs to source their RC file.
 func verifyOpenCodeWorks(result *VerifyResult) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	// Try opencode in PATH first
 	cmd := exec.CommandContext(ctx, "opencode", "--version")
-	if err := cmd.Run(); err != nil {
-		// Try fallback location: ~/.opencode/bin/opencode
-		installPath := GetOpenCodeInstallPath()
-		if _, statErr := os.Stat(installPath); statErr == nil {
-			fallbackCmd := exec.CommandContext(ctx, installPath, "--version") //nolint:gosec // G702: controlled binary path
-			if fallbackErr := fallbackCmd.Run(); fallbackErr == nil {
-				// Binary exists at fallback but not in PATH — suggest adding it
-				shellRC := getShellRCFile(func() string {
-					h, _ := getUserHomeDir()
-					return h
-				}())
-				result.Errors = append(result.Errors,
-					fmt.Sprintf("opencode installed at %s but not in PATH. Add it by running: echo 'export PATH=\"$HOME/.opencode/bin:$PATH\"' >> %s", installPath, shellRC))
-				return false
-			}
-		}
-
-		result.Errors = append(result.Errors, fmt.Sprintf("opencode CLI not working: %v", err))
-		return false
+	if err := cmd.Run(); err == nil {
+		return true
 	}
 
-	return true
+	// Fallback: try the known install location directly
+	installPath := GetOpenCodeInstallPath()
+	if _, statErr := os.Stat(installPath); statErr == nil {
+		fallbackCmd := exec.CommandContext(ctx, installPath, "--version") //nolint:gosec // G702: controlled binary path
+		if fallbackErr := fallbackCmd.Run(); fallbackErr == nil {
+			// Binary works at fallback location. It's installed correctly,
+			// the user just needs to source their RC to update PATH.
+			// Return true but add an informational note.
+			result.Errors = append(result.Errors,
+				fmt.Sprintf("opencode installed at %s but not in current PATH — run 'source ~/.bashrc' or open a new terminal", installPath))
+			return true
+		}
+	}
+
+	result.Errors = append(result.Errors, fmt.Sprintf("opencode CLI not found in PATH or at %s", installPath))
+	return false
 }
 
 // verifyEngramWorks checks that engram CLI is installed and working.

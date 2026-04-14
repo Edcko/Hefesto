@@ -58,6 +58,18 @@ func InstallOpenCode() (string, error) {
 		logger.Debug("opencode: PATH update warning (non-fatal): %v", err)
 	}
 
+	// Update the current process PATH so this session can find opencode.
+	// The curl|bash installer puts the binary at ~/.opencode/bin/opencode,
+	// but the current shell's PATH hasn't been refreshed yet.
+	updateCurrentProcessPath()
+
+	// Verify the binary actually exists at the expected location
+	installPath := GetOpenCodeInstallPath()
+	if _, statErr := os.Stat(installPath); statErr != nil {
+		return "", fmt.Errorf("opencode installer completed but binary not found at %s: %w", installPath, statErr)
+	}
+	logger.Debug("opencode: binary verified at %s", installPath)
+
 	// Verify installation by checking the binary path or running --version
 	version, err := verifyOpenCodeInstall()
 	if err != nil {
@@ -182,6 +194,37 @@ func ensureOpenCodeInPath() error {
 
 	logger.Debug("opencode: added %s to %s", openCodeBinDir, rcFile)
 	return nil
+}
+
+// updateCurrentProcessPath adds ~/.opencode/bin to the PATH of the current
+// process environment. This ensures that subsequent exec.LookPath and
+// exec.Command calls within this process can find the opencode binary
+// without requiring the user to open a new terminal.
+func updateCurrentProcessPath() {
+	homeDir, err := getUserHomeDir()
+	if err != nil {
+		logger.Debug("opencode: cannot update process PATH: %v", err)
+		return
+	}
+
+	opencodeBinDir := filepath.Join(homeDir, openCodeBinDir)
+	currentPath := os.Getenv("PATH")
+
+	// Check if already in PATH
+	for _, dir := range filepath.SplitList(currentPath) {
+		if dir == opencodeBinDir {
+			logger.Debug("opencode: %s already in process PATH", opencodeBinDir)
+			return
+		}
+	}
+
+	newPath := opencodeBinDir + string(filepath.ListSeparator) + currentPath
+	if err := os.Setenv("PATH", newPath); err != nil {
+		logger.Debug("opencode: failed to update process PATH: %v", err)
+		return
+	}
+
+	logger.Debug("opencode: added %s to current process PATH", opencodeBinDir)
 }
 
 // getShellRCFile returns the path to the user's shell RC file.

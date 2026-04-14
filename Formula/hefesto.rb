@@ -13,22 +13,22 @@ class Hefesto < Formula
   on_macos do
     on_arm do
       url "https://github.com/Edcko/Hefesto/releases/download/v#{version}/hefesto-darwin-arm64"
-      sha256 "c080421b791966bacd1cfdab10a6b0cc5d1ca3412d54a71e4d4866cda4a726f1"
+      sha256 "cd37a4413457eeb218595edc4808b64f440ff0b4eba6273e89724ff8368683a5"
     end
     on_intel do
       url "https://github.com/Edcko/Hefesto/releases/download/v#{version}/hefesto-darwin-amd64"
-      sha256 "032923c05b7484fd7144b9613cdabf78cb26c918f02f7ce4cad8cbadd6cca49f"
+      sha256 "d00bdf9f80ccba874640a8687e0dd2e677252755087a6c720711d08eaedffb39"
     end
   end
 
   on_linux do
     on_arm do
       url "https://github.com/Edcko/Hefesto/releases/download/v#{version}/hefesto-linux-arm64"
-      sha256 "18a7405472eead65cbf9624bdfc05da45ece5edca0cd7679fdf3485044dd62cf"
+      sha256 "b52d89f22ed2fad7bf0b8ac15f6a8bc29b214391d830a3d172b21c07e8d98bd2"
     end
     on_intel do
       url "https://github.com/Edcko/Hefesto/releases/download/v#{version}/hefesto-linux-amd64"
-      sha256 "527782a8fc4ceeadcb843287811c33fa122d9c1771fae419322a7bd0ffcf7bad"
+      sha256 "7ae936e2c63758c64969780b7263a04358050acddac69bf7ac8dc8b108dcc1ec"
     end
   end
 

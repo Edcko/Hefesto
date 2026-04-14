@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -111,6 +112,13 @@ func (m *CompleteModel) View() string {
 		}
 		b.WriteString(CenterText(GreenText(fmt.Sprintf("%s OpenCode CLI installed%s", IconCheck, versionInfo)), width))
 		b.WriteString("\n")
+
+		// Tell the user to reload their shell so PATH picks up the new binary.
+		// The installer added ~/.opencode/bin to .bashrc/.zshrc but the current
+		// session doesn't have it yet.
+		rcHint := getRCHint()
+		b.WriteString(CenterText(CopperText("Run")+AmberText(fmt.Sprintf(" $ source %s", rcHint))+CopperText(" or open a new terminal"), width))
+		b.WriteString("\n")
 	}
 
 	if m.OpenCodeInstallAttempted && !m.OpenCodeInstallSuccess && m.OpenCodeInstallError != "" {
@@ -138,4 +146,14 @@ func (m *CompleteModel) View() string {
 		Height: m.height,
 		Border: BorderNone,
 	})
+}
+
+// getRCHint returns the user's shell RC file name (e.g. "~/.zshrc" or "~/.bashrc")
+// so the complete screen can suggest sourcing it to refresh PATH.
+func getRCHint() string {
+	shell := os.Getenv("SHELL")
+	if strings.Contains(shell, "zsh") {
+		return "~/.zshrc"
+	}
+	return "~/.bashrc"
 }

@@ -123,6 +123,18 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		return runInstallerWithProgress(installer)
 	}
 
+	// Check if stdin is a terminal (not piped/redirected) before launching TUI.
+	// Without a TTY, Bubbletea's alt screen buffer fails silently in Docker and
+	// the user sees nothing — no output, no error. This check gives a clear message.
+	fi, err := os.Stdin.Stat()
+	if err != nil || fi.Mode()&os.ModeCharDevice == 0 {
+		fmt.Fprintln(os.Stderr)
+		fmt.Fprintln(os.Stderr, "  ❌ Interactive terminal required.")
+		fmt.Fprintln(os.Stderr, "  Run with --yes (-y) for non-interactive installation.")
+		fmt.Fprintln(os.Stderr)
+		return fmt.Errorf("non-interactive terminal: use --yes to run in non-interactive mode")
+	}
+
 	// Launch interactive TUI
 	tui.SetVersion(version)
 	return tui.Run()
