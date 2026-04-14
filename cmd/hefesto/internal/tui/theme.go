@@ -2,11 +2,56 @@
 package tui
 
 import (
+	"os"
 	"runtime/debug"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 )
+
+// init forces the lipgloss color profile based on environment variables.
+//
+// Lipgloss's auto-detection is conservative and fails inside Docker exec
+// environments even when the terminal supports TrueColor. We explicitly
+// set the profile from COLORTERM and TERM when stdout is a terminal.
+// When piped (e.g., hefesto install | less), we let lipgloss auto-detect
+// which will correctly fall back to no-color/ASCII.
+func init() {
+	forceColorProfile()
+}
+
+// forceColorProfile sets the lipgloss color profile based on COLORTERM and
+// TERM environment variables. It only forces a profile when stdout is a
+// terminal (character device), so piped output is unaffected.
+func forceColorProfile() {
+	// Don't force colors if stdout is piped or redirected.
+	// When stdout is a pipe, Stat returns a file info whose mode is
+	// os.ModeNamedPipe, not os.ModeDevice|os.ModeCharDevice.
+	fi, err := os.Stdout.Stat()
+	if err != nil {
+		return
+	}
+	// Check if stdout is a character device (terminal).
+	// ModeDevice means it's a device file, ModeCharDevice narrows to tty.
+	if fi.Mode()&os.ModeDevice == 0 || fi.Mode()&os.ModeCharDevice == 0 {
+		return
+	}
+
+	ct := strings.ToLower(os.Getenv("COLORTERM"))
+	term := os.Getenv("TERM")
+
+	switch {
+	case strings.Contains(ct, "truecolor") || strings.Contains(ct, "24bit"):
+		lipgloss.SetColorProfile(termenv.TrueColor)
+	case strings.Contains(term, "256color"):
+		lipgloss.SetColorProfile(termenv.ANSI256)
+	case strings.Contains(term, "xterm"), strings.Contains(term, "screen"), strings.Contains(term, "vt100"):
+		lipgloss.SetColorProfile(termenv.ANSI256)
+	default:
+		// Let lipgloss auto-detect (current behavior).
+	}
+}
 
 // ===== Fuego/Forge Theme Colors =====
 // The aesthetic of the forge - fire, metal, and craftsmanship
