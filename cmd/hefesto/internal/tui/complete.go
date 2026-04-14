@@ -34,7 +34,7 @@ func NewCompleteModel(configPath string, width, height int) *CompleteModel {
 		configPath: configPath,
 		InstalledComponents: []InstalledComponent{
 			{Name: "Config files", Description: "(AGENTS.md, opencode.json)"},
-			{Name: "25 AI skills", Description: "(Angular, React, SDD...)"},
+			{Name: "30 AI skills", Description: "(Angular, React, SDD...)"},
 			{Name: "6 SDD phase agents", Description: "(init→plan→spec→...)"},
 			{Name: "Fuego/Forge theme", Description: "(amber/copper)"},
 			{Name: "Engram", Description: "(persistent memory)"},
@@ -71,25 +71,11 @@ func (m *CompleteModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *CompleteModel) View() string {
 	width := ResolveContentWidth(m.width)
 
-	// Wizard progress: all done
-	wizardSteps := []WizardStep{
-		{Label: "Welcome", Done: true},
-		{Label: "Detect", Done: true},
-		{Label: "Select", Done: true},
-		{Label: "Backup", Done: true},
-		{Label: "Install", Done: true},
-		{Label: "Complete", Done: true},
-	}
-
 	var b strings.Builder
-
-	// Wizard progress — all green
-	b.WriteString(RenderWizardProgress(wizardSteps, width))
-	b.WriteString(strings.Repeat("\n", SpaceLG))
 
 	// Hero section — borderless celebration
 	b.WriteString(RenderCenteredHero(BannerAnvil, "Installation Complete!", "", width))
-	b.WriteString(strings.Repeat("\n", SpaceSM))
+	b.WriteString(strings.Repeat("\n", SpaceXS))
 
 	// Installed components
 	for _, comp := range m.InstalledComponents {
@@ -99,7 +85,7 @@ func (m *CompleteModel) View() string {
 		b.WriteString("\n")
 	}
 
-	b.WriteString(strings.Repeat("\n", SpaceSM))
+	b.WriteString(strings.Repeat("\n", SpaceXS))
 
 	// Installation time
 	durationStr := "Installed in "
@@ -109,22 +95,17 @@ func (m *CompleteModel) View() string {
 		durationStr += "< 1s"
 	}
 	b.WriteString(CenterText(AmberText(durationStr), width))
-	b.WriteString(strings.Repeat("\n", SpaceMD))
+	b.WriteString(strings.Repeat("\n", SpaceXS))
 
-	// Next steps section
-	b.WriteString(CenterText(CopperText("Start using:"), width))
+	// Next steps — compact single-line format
+	b.WriteString(CenterText(CopperText("Run")+AmberText(" $ opencode")+CopperText(" to start"), width))
 	b.WriteString("\n")
-	b.WriteString(CenterText(AmberText("$ opencode"), width))
-	b.WriteString(strings.Repeat("\n", SpaceSM))
-
-	b.WriteString(CenterText(CopperText("Check status:"), width))
-	b.WriteString("\n")
-	b.WriteString(CenterText(AmberText("$ hefesto status"), width))
-	b.WriteString(strings.Repeat("\n", SpaceMD))
+	b.WriteString(CenterText(CopperText("Run")+AmberText(" $ hefesto status")+CopperText(" to check"), width))
+	b.WriteString(strings.Repeat("\n", SpaceXS))
 
 	// Forge on message
 	b.WriteString(CenterText(AmberText("Forge on!"), width))
-	b.WriteString(strings.Repeat("\n", SpaceSM))
+	b.WriteString(strings.Repeat("\n", SpaceXS))
 
 	// Help bar
 	hints := []KeyHint{

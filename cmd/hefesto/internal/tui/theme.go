@@ -205,15 +205,15 @@ const (
 
 // BannerAnvil is the ASCII art anvil with flame spark.
 // Uses single-width characters only to avoid alignment issues in terminals.
-const BannerAnvil = `
-     *
-    ╱│╲
-   ╱ │ ╲
-  ╱  │  ╲
- ╱___▼___╲
-  ║███████║
-  ║███████║
-  ╰═══════╯`
+// No leading newline — the caller controls spacing.
+const BannerAnvil = `       *
+      ╱│╲
+     ╱ │ ╲
+    ╱  │  ╲
+   ╱___▼___╲
+   ║███████║
+   ║███████║
+   ╰═══════╯`
 
 // Logo - Alias for BannerAnvil (backward compatibility)
 var Logo = BannerAnvil

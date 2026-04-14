@@ -75,17 +75,15 @@ func (m *WelcomeModel) View() string {
 
 	// ===== Assemble with consistent spacing =====
 	var b strings.Builder
-	b.WriteString(strings.Repeat("\n", SpaceLG))
 	b.WriteString(hero)
-	b.WriteString(strings.Repeat("\n", SpaceSM))
+	b.WriteString(strings.Repeat("\n", SpaceXS))
 	b.WriteString(desc)
-	b.WriteString(strings.Repeat("\n", SpaceMD))
+	b.WriteString(strings.Repeat("\n", SpaceSM))
 	b.WriteString(installHeader)
 	b.WriteString("\n")
 	b.WriteString(itemLines.String())
-	b.WriteString(strings.Repeat("\n", SpaceSM))
+	b.WriteString(strings.Repeat("\n", SpaceXS))
 	b.WriteString(helpBar)
-	b.WriteString(strings.Repeat("\n", SpaceLG))
 
 	content := b.String()
 
