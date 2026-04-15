@@ -137,6 +137,78 @@
         "write": true
       }
     },
+    "sdd-explore": {
+      "description": "Investigate codebase and think through ideas",
+      "hidden": true,
+      "mode": "subagent",
+      "steps": 30,
+      "permission": {
+        "task": {
+          "*": "deny"
+        }
+      },
+      "prompt": "You are an SDD sub-agent for the explore phase. Read your skill file at ~/.config/opencode/skills/sdd-explore/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
+      "tools": {
+        "bash": true,
+        "edit": true,
+        "read": true,
+        "write": true
+      }
+    },
+    "sdd-propose": {
+      "description": "Create change proposals from explorations",
+      "hidden": true,
+      "mode": "subagent",
+      "steps": 35,
+      "permission": {
+        "task": {
+          "*": "deny"
+        }
+      },
+      "prompt": "You are an SDD sub-agent for the propose phase. Read your skill file at ~/.config/opencode/skills/sdd-propose/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
+      "tools": {
+        "bash": true,
+        "edit": true,
+        "read": true,
+        "write": true
+      }
+    },
+    "sdd-design": {
+      "description": "Create technical design from proposals",
+      "hidden": true,
+      "mode": "subagent",
+      "steps": 40,
+      "permission": {
+        "task": {
+          "*": "deny"
+        }
+      },
+      "prompt": "You are an SDD sub-agent for the design phase. Read your skill file at ~/.config/opencode/skills/sdd-design/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
+      "tools": {
+        "bash": true,
+        "edit": true,
+        "read": true,
+        "write": true
+      }
+    },
+    "sdd-archive": {
+      "description": "Archive completed change artifacts",
+      "hidden": true,
+      "mode": "subagent",
+      "steps": 25,
+      "permission": {
+        "task": {
+          "*": "deny"
+        }
+      },
+      "prompt": "You are an SDD sub-agent for the archive phase. Read your skill file at ~/.config/opencode/skills/sdd-archive/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
+      "tools": {
+        "bash": true,
+        "edit": true,
+        "read": true,
+        "write": true
+      }
+    },
     "remote-exec": {
       "description": "Execute commands on remote servers via SSH — DevOps/infrastructure operations",
       "hidden": true,

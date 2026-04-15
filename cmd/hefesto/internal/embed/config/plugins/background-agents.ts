@@ -511,15 +511,9 @@ ${delegation.description || "(No description)"}
         this.pendingByParent.delete(delegation.parentSessionID)
       }
 
-      // Build summary from result (truncate to ~500 chars for context efficiency)
+      // Build summary from result — send full content (aligned with Gentleman.Dots)
       const fullResult = delegation.result || delegation.error || "(No result)"
-      const maxSummaryLength = 500
       let summary = fullResult
-      let truncated = false
-      if (summary.length > maxSummaryLength) {
-        summary = summary.substring(0, maxSummaryLength)
-        truncated = true
-      }
 
       // Send completion notification with inline summary
       const notification = `[TASK NOTIFICATION]
@@ -529,7 +523,7 @@ Agent: ${delegation.title || delegation.id}${delegation.error ? `\nError: ${dele
 
 Summary:
 
-${summary}${truncated ? `\n\n... (truncated. Use delegation_read(${delegation.id}) for full output)` : ""}`
+${summary}`
 
       await this.client.session.prompt({
         path: { id: delegation.parentSessionID },
@@ -693,7 +687,7 @@ Use \`delegation_read(id)\` only if you need the full output. Results are persis
       agent: tool.schema
         .string()
         .describe(
-          'Agent to delegate to. Available agents: "sdd-init", "sdd-plan", "sdd-spec", "sdd-tasks", "sdd-apply", "sdd-verify", "remote-exec", or "general" for generic tasks.',
+          'Agent to delegate to. Available agents: "sdd-init", "sdd-explore", "sdd-propose", "sdd-spec", "sdd-design", "sdd-tasks", "sdd-apply", "sdd-verify", "sdd-archive", "sdd-plan", "remote-exec", or "general" for generic tasks.',
         ),
     },
     async execute(args: DelegateArgs, toolCtx: ToolContext): Promise<string> {

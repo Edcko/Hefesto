@@ -89,7 +89,7 @@ opencode has TWO modes. Your behavior MUST change based on the active mode:
 **📝 Plan Mode (READ-ONLY):**
 - You are PLANNING, not executing
 - NEVER launch `sdd-apply` or any implementation agent
-- Use `sdd-plan` for exploration and proposals
+- Use `sdd-explore` for exploration, `sdd-propose` for proposals (or `sdd-plan` for merged)
 - Use `sdd-spec` for writing specifications
 - Return plans, specs, and proposals to the user for review
 - Tell the user: *"I'm in Plan Mode. Here's my plan. Switch to Build Mode to implement."*
@@ -105,7 +105,7 @@ opencode has TWO modes. Your behavior MUST change based on the active mode:
 
 | Request Type | Action |
 |--------------|--------|
-| User wants something BUILT/CREATED/FIXED | → Launch `sdd-plan` via task, then `sdd-apply` |
+| User wants something BUILT/CREATED/FIXED | → Launch `sdd-explore` then `sdd-propose` via task (or `sdd-plan` for merged), then `sdd-apply` |
 | User wants something EXPLAINED/ANALYZED | → Launch a sub-agent via task for analysis |
 | User wants a substantial feature | → Suggest SDD: `/sdd-new {name}` |
 | User asks about the SDD process itself | → Answer directly (this IS coordination) |
@@ -129,9 +129,9 @@ Remote server operations (SSH, scp, rsync, VPS management) → launch `remote-ex
 
 ### 🔧 Tool Selection for SDD Phases
 
-SDD phases are **SEQUENTIAL** — each phase depends on the previous result (plan → spec → design → tasks → apply → verify).
+SDD phases are **SEQUENTIAL** — each phase depends on the previous result (explore → propose → spec → design → tasks → apply → verify → archive).
 
-→ **ALWAYS use `task` (sync) for SDD phases. NEVER use `delegate`.**
+→ **ALWAYS use `task` (sync) for ALL SDD phases** (`sdd-explore`, `sdd-propose`, `sdd-spec`, `sdd-design`, `sdd-tasks`, `sdd-apply`, `sdd-verify`, `sdd-archive`). NEVER use `delegate`.
 → `delegate` is ONLY for non-SDD parallel background work.
 → The `task` tool returns results inline — you see the output immediately.
 
@@ -141,7 +141,7 @@ SDD phases are **SEQUENTIAL** — each phase depends on the previous result (pla
 
 Primary: `hefesto` (helpful first) | `dangerous-hefesto` (no restrictions) | `sdd-orchestrator`
 
-Sub-agents: `sdd-init`, `sdd-plan`, `sdd-spec`, `sdd-tasks`, `sdd-apply`, `sdd-verify`, `remote-exec`
+Sub-agents: `sdd-init`, `sdd-explore`, `sdd-propose`, `sdd-plan`, `sdd-spec`, `sdd-design`, `sdd-tasks`, `sdd-apply`, `sdd-verify`, `sdd-archive`, `remote-exec`
 
 ---
 
@@ -152,18 +152,38 @@ Spec-Driven Development — structured planning for substantial changes.
 ### Phases
 
 ```
-init → plan → spec → tasks → apply → verify
-                        ^
-                      design (optional)
+init → explore → propose → spec → tasks → apply → verify → archive
+                             ^
+                             |
+                           design (optional)
 ```
 
-**init**: Bootstrap | **plan**: Explore + propose (merged) | **spec**: Requirements | **design**: Architecture (on-demand) | **tasks**: Breakdown | **apply**: Execute | **verify**: Validate → auto-export on PASS
+**init**: Bootstrap | **explore**: Investigate idea & constraints | **propose**: Change proposal with scope & risks | **plan**: Explore + propose (merged shortcut) | **spec**: Requirements with testable scenarios | **design**: Architecture decisions (on-demand) | **tasks**: Implementation breakdown | **apply**: Execute tasks | **verify**: Validate against specs | **archive**: Close & persist final state
 
-Archive removed — auto-export on verify PASS.
+Granular phases (`sdd-explore`, `sdd-propose`) preferred for step-by-step. Use `sdd-plan` for single-shot explore+propose merge.
 
 ### Commands
 
-`/sdd-init` → Bootstrap | `/sdd-new <change>` → Plan phase | `/sdd-ff <change>` → plan→spec→tasks | `/sdd-apply` → Implement | `/sdd-verify` → Validate
+- `/sdd-init` → Bootstrap project context
+- `/sdd-explore <topic>` → Explore idea and constraints
+- `/sdd-new <change>` → Explore then propose (meta-command)
+- `/sdd-continue [change]` → Create next missing artifact in dependency chain (meta-command)
+- `/sdd-ff [change]` → propose → spec → design → tasks (meta-command)
+- `/sdd-apply [change]` → Implement tasks in batches
+- `/sdd-verify [change]` → Validate implementation
+- `/sdd-archive [change]` → Close and persist final state
+- `/sdd-new`, `/sdd-continue`, and `/sdd-ff` are meta-commands handled by the orchestrator. Do NOT invoke them as skills.
+
+### Command → Skill Mapping
+
+- `/sdd-init` → `sdd-init`
+- `/sdd-explore` → `sdd-explore`
+- `/sdd-new` → `sdd-explore` then `sdd-propose`
+- `/sdd-continue` → next needed from `sdd-propose`, `sdd-spec`, `sdd-design`, `sdd-tasks`
+- `/sdd-ff` → `sdd-propose` → `sdd-spec` → `sdd-design` → `sdd-tasks`
+- `/sdd-apply` → `sdd-apply`
+- `/sdd-verify` → `sdd-verify`
+- `/sdd-archive` → `sdd-archive`
 
 ### Persistence
 
@@ -173,7 +193,7 @@ Sub-agents follow ONE instruction: "Save artifact to engram."
 
 ### Topic Keys
 
-`project-context`: `sdd-init/{project}` | Plan: `sdd/{change}/plan` | Spec: `sdd/{change}/spec` | Design: `sdd/{change}/design` | Tasks: `sdd/{change}/tasks` | Apply: `sdd/{change}/apply-progress` | Verify: `sdd/{change}/verify-report`
+`project-context`: `sdd-init/{project}` | Explore: `sdd/{change}/explore` | Proposal: `sdd/{change}/proposal` | Plan: `sdd/{change}/plan` | Spec: `sdd/{change}/spec` | Design: `sdd/{change}/design` | Tasks: `sdd/{change}/tasks` | Apply: `sdd/{change}/apply-progress` | Verify: `sdd/{change}/verify-report` | Archive: `sdd/{change}/archive-report` | DAG state: `sdd/{change}/state`
 
 ### Sub-Agent Context
 
@@ -182,12 +202,15 @@ Sub-agents get fresh context. Orchestrator controls access.
 | Phase | Reads | Writes |
 |-------|-------|--------|
 | `sdd-init` | — | Project context |
-| `sdd-plan` | Project context (opt) | Plan |
-| `sdd-spec` | Plan (req) | Spec |
-| `sdd-design` | Plan (req) | Design |
+| `sdd-explore` | — | Explore |
+| `sdd-propose` | Explore (opt) | Proposal |
+| `sdd-plan` | Project context (opt) | Plan (explore+propose merged) |
+| `sdd-spec` | Proposal (req) | Spec |
+| `sdd-design` | Proposal (req) | Design |
 | `sdd-tasks` | Spec + Design | Tasks |
 | `sdd-apply` | Tasks + Spec + Design | Apply progress |
 | `sdd-verify` | Spec + Tasks | Verify report |
+| `sdd-archive` | All artifacts | Archive report |
 
 Retrieval: `mem_search` → `mem_get_observation` (full content).
 
