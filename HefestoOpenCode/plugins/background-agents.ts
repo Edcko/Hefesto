@@ -511,11 +511,25 @@ ${delegation.description || "(No description)"}
         this.pendingByParent.delete(delegation.parentSessionID)
       }
 
-      // Send completion notification
+      // Build summary from result (truncate to ~500 chars for context efficiency)
+      const fullResult = delegation.result || delegation.error || "(No result)"
+      const maxSummaryLength = 500
+      let summary = fullResult
+      let truncated = false
+      if (summary.length > maxSummaryLength) {
+        summary = summary.substring(0, maxSummaryLength)
+        truncated = true
+      }
+
+      // Send completion notification with inline summary
       const notification = `[TASK NOTIFICATION]
 ID: ${delegation.id}
 Status: ${delegation.status}
-Use delegation_read(id) to retrieve the full result.`
+Agent: ${delegation.title || delegation.id}${delegation.error ? `\nError: ${delegation.error}` : ""}
+
+Summary:
+
+${summary}${truncated ? `\n\n... (truncated. Use delegation_read(${delegation.id}) for full output)` : ""}`
 
       await this.client.session.prompt({
         path: { id: delegation.parentSessionID },
@@ -670,8 +684,8 @@ Use this for:
 - Parallel work that can run in background
 - Any task where you want persistent, retrievable output
 
-On completion, a compact notification arrives with the ID and status only.
-Use \`delegation_read(id)\` to retrieve the full result. Results are persisted to disk and survive compaction.`,
+On completion, a notification arrives with an inline summary of the result.
+Use \`delegation_read(id)\` only if you need the full output. Results are persisted to disk and survive compaction.`,
     args: {
       prompt: tool.schema
         .string()
@@ -679,7 +693,7 @@ Use \`delegation_read(id)\` to retrieve the full result. Results are persisted t
       agent: tool.schema
         .string()
         .describe(
-          'Agent to delegate to: "explore" (codebase search), "researcher" (external research), "scribe" (docs/commits), or "general".',
+          'Agent to delegate to. Available agents: "sdd-init", "sdd-plan", "sdd-spec", "sdd-tasks", "sdd-apply", "sdd-verify", "remote-exec", or "general" for generic tasks.',
         ),
     },
     async execute(args: DelegateArgs, toolCtx: ToolContext): Promise<string> {
@@ -725,6 +739,22 @@ Use this to retrieve results from delegated tasks if the inline notification was
       if (!toolCtx?.sessionID) {
         return "❌ delegation_read requires sessionID. This is a system error."
       }
+
+      // Guard: delegation IDs are human-readable (e.g., "swift-falcon"), NOT session IDs (ses_*)
+      if (args.id.startsWith("ses_")) {
+        return [
+          "❌ You passed a session ID (`ses_*`) to `delegation_read`.",
+          "",
+          "Session IDs come from the sync `task` tool, which returns results inline.",
+          "You already have the result — it was in the task tool's response.",
+          "",
+          "`delegation_read` only accepts delegation IDs like `swift-falcon`,",
+          "which come from the async `delegate` tool.",
+          "",
+          "Do NOT call delegation_read for task results. Use the inline response directly."
+        ].join("\n");
+      }
+
       return await manager.readOutput(toolCtx.sessionID, args.id)
     },
   })
@@ -750,6 +780,14 @@ Shows both running and completed delegations.`,
         const descPart = d.description ? `\n  → ${d.description}` : ""
         return `- **${d.id}**${titlePart} [${d.status}]${descPart}`
       })
+
+      // Add stale data warning if there are completed delegations from disk
+      const hasCompleted = delegations.some(item => item.status === "complete")
+      if (hasCompleted) {
+        lines.push("")
+        lines.push("> ⚠️ Completed delegations may include results from previous sessions.")
+        lines.push("> Verify the ID matches your current delegation before relying on the result.")
+      }
 
       return `## Delegations\n\n${lines.join("\n")}`
     },
@@ -781,13 +819,15 @@ Any agent can be used with \`delegate\`. Results survive context compaction.
 
 1. Call \`delegate(prompt, agent)\` with a detailed prompt and agent name
 2. Continue productive work while it runs in the background
-3. Receive a \`<task-notification>\` when complete (compact: ID + status only)
-4. Use \`delegation_read(id)\` to retrieve the full result when needed
+3. Receive a \`<task-notification>\` when complete (includes summary inline)
+4. If you need the full output, use \`delegation_read(id)\` — the notification includes the ID
 
 ## Critical Constraints
 
 **NEVER poll \`delegation_list\` to check completion.**
 You WILL be notified via \`<task-notification>\`. Polling wastes tokens.
+
+**The \`task\` tool returns results INLINE — you already have them. Do NOT use \`delegation_read\` for task results.**
 
 **NEVER wait idle.** Always have productive work while delegations run.
 

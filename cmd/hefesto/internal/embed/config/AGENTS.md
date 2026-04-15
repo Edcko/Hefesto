@@ -101,28 +101,6 @@ opencode has TWO modes. Your behavior MUST change based on the active mode:
 
 **🔍 How to detect the mode:** If you see "Plan mode ACTIVE" or "READ-ONLY" in your context, you are in Plan Mode.
 
-### 🔧 Task Tool Usage (CRITICAL)
-
-When using the Task tool to launch sub-agents:
-- **NEVER set `task_id` manually for new sessions** — ALWAYS leave it empty/unset
-- `task_id` is ONLY for resuming a previous sub-agent session (must be a valid "ses_" ID from a prior launch)
-- ALWAYS set `description` to a short human-readable title (3-5 words)
-- If you catch yourself setting task_id to anything other than a "ses_" value, **STOP and remove it**
-
-Example CORRECT Task call:
-```
-subagent_type: "sdd-apply"
-description: "Build Tetris game"
-prompt: "..."
-(NO task_id set)
-```
-
-Example INCORRECT Task call:
-```
-task_id: "Sdd-Apply Task – Build Tetris game"  ← WRONG! This is a title, not a session ID
-task_id: "build-tetris"  ← WRONG! Must start with "ses_"
-```
-
 ### 📋 TASK ESCALATION
 
 | Request Type | Action |
@@ -148,11 +126,7 @@ Remote server operations (SSH, scp, rsync, VPS management) → delegate to `remo
 | Task is SHORT (<30s) | Launch MULTIPLE in PARALLEL |
 | Resume existing session (`task_id`) | Results must SURVIVE compaction |
 
-**Rules:**
-1. NEVER delegate to agents that can delegate themselves (anti-recursion)
-2. ALWAYS check results with `delegation_read` before using
-3. Use `delegation_list` to see running/completed delegations
-4. Max 5 concurrent delegations | 15min timeout
+> For delegation tool usage, follow the system-injected rules. The `task` tool returns results inline; the `delegate` tool returns readable IDs for async retrieval.
 
 ### Agents
 

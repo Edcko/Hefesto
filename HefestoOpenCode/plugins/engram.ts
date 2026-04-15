@@ -1,5 +1,5 @@
 /**
- * Engram — Hefesto OpenCode Plugin (Slim Version)
+ * Engram — OpenCode plugin adapter
  *
  * Thin layer that connects OpenCode's event system to the Engram Go binary.
  * The Go binary runs as a local HTTP server and handles all persistence.
@@ -7,13 +7,11 @@
  * Flow:
  *   OpenCode events → this plugin → HTTP calls → engram serve → SQLite
  *
- * Features (3):
- *   1. Auto-start engram server + auto-import from .engram/manifest.json
- *   2. Compaction hook — inject context + instruct agent to save summary
- *   3. Passive capture — track sessions, capture prompts, extract learnings
- *
- * NOTE: Memory instructions are NOT injected here. Hefesto's AGENTS.md already
- * contains the full Engram Protocol section, so injecting it would be redundant.
+ * Session resilience:
+ *   Uses `ensureSession()` before any DB write. This means sessions are
+ *   created on-demand — even if the plugin was loaded after the session
+ *   started (restart, reconnect, etc.). The session ID comes from OpenCode's
+ *   hooks (input.sessionID) rather than relying on a session.created event.
  */
 
 import type { Plugin } from "@opencode-ai/plugin"
@@ -40,6 +38,87 @@ const ENGRAM_TOOLS = new Set([
   "mem_session_start",
   "mem_session_end",
 ])
+
+// ─── Memory Instructions ─────────────────────────────────────────────────────
+// These get injected into the agent's context so it knows to call mem_save.
+
+const MEMORY_INSTRUCTIONS = `## Engram Persistent Memory — Protocol
+
+You have access to Engram, a persistent memory system that survives across sessions and compactions.
+
+### WHEN TO SAVE (mandatory — not optional)
+
+Call \`mem_save\` IMMEDIATELY after any of these:
+- Bug fix completed
+- Architecture or design decision made
+- Non-obvious discovery about the codebase
+- Configuration change or environment setup
+- Pattern established (naming, structure, convention)
+- User preference or constraint learned
+
+Format for \`mem_save\`:
+- **title**: Verb + what — short, searchable (e.g. "Fixed N+1 query in UserList", "Chose Zustand over Redux")
+- **type**: bugfix | decision | architecture | discovery | pattern | config | preference
+- **scope**: \`project\` (default) | \`personal\`
+- **topic_key** (optional, recommended for evolving decisions): stable key like \`architecture/auth-model\`
+- **content**:
+  **What**: One sentence — what was done
+  **Why**: What motivated it (user request, bug, performance, etc.)
+  **Where**: Files or paths affected
+  **Learned**: Gotchas, edge cases, things that surprised you (omit if none)
+
+Topic rules:
+- Different topics must not overwrite each other (e.g. architecture vs bugfix)
+- Reuse the same \`topic_key\` to update an evolving topic instead of creating new observations
+- If unsure about the key, call \`mem_suggest_topic_key\` first and then reuse it
+- Use \`mem_update\` when you have an exact observation ID to correct
+
+### WHEN TO SEARCH MEMORY
+
+When the user asks to recall something — any variation of "remember", "recall", "what did we do",
+"how did we solve", "recordar", "acordate", "qué hicimos", or references to past work:
+1. First call \`mem_context\` — checks recent session history (fast, cheap)
+2. If not found, call \`mem_search\` with relevant keywords (FTS5 full-text search)
+3. If you find a match, use \`mem_get_observation\` for full untruncated content
+
+Also search memory PROACTIVELY when:
+- Starting work on something that might have been done before
+- The user mentions a topic you have no context on — check if past sessions covered it
+
+### SESSION CLOSE PROTOCOL (mandatory)
+
+Before ending a session or saying "done" / "listo" / "that's it", you MUST:
+1. Call \`mem_session_summary\` with this structure:
+
+## Goal
+[What we were working on this session]
+
+## Instructions
+[User preferences or constraints discovered — skip if none]
+
+## Discoveries
+- [Technical findings, gotchas, non-obvious learnings]
+
+## Accomplished
+- [Completed items with key details]
+
+## Next Steps
+- [What remains to be done — for the next session]
+
+## Relevant Files
+- path/to/file — [what it does or what changed]
+
+This is NOT optional. If you skip this, the next session starts blind.
+
+### AFTER COMPACTION
+
+If you see a message about compaction or context reset, or if you see "FIRST ACTION REQUIRED" in your context:
+1. IMMEDIATELY call \`mem_session_summary\` with the compacted summary content — this persists what was done before compaction
+2. Then call \`mem_context\` to recover any additional context from previous sessions
+3. Only THEN continue working
+
+Do not skip step 1. Without it, everything done before compaction is lost from memory.
+`
 
 // ─── HTTP Client ─────────────────────────────────────────────────────────────
 
@@ -120,8 +199,7 @@ export const Engram: Plugin = async (ctx) => {
     })
   }
 
-  // ─── Feature 1: Auto-start engram server ────────────────────────────────
-
+  // Try to start engram server if not running
   const running = await isEngramRunning()
   if (!running) {
     try {
@@ -156,7 +234,7 @@ export const Engram: Plugin = async (ctx) => {
   }
 
   return {
-    // ─── Feature 3: Event Listeners (Passive Capture) ─────────────────────
+    // ─── Event Listeners ───────────────────────────────────────────
 
     event: async ({ event }) => {
       // --- Session Created ---
@@ -206,7 +284,7 @@ export const Engram: Plugin = async (ctx) => {
       }
     },
 
-    // ─── Feature 3: Tool Execution Hook (Passive Capture) ────────────────
+    // ─── Tool Execution Hook ─────────────────────────────────────
     // Count tool calls per session (for session end stats).
     // Also ensures the session exists — handles plugin reload / reconnect.
     // Passive capture: when a Task tool completes, POST its output to
@@ -239,7 +317,15 @@ export const Engram: Plugin = async (ctx) => {
       }
     },
 
-    // ─── Feature 2: Compaction Hook ───────────────────────────────────────
+    // ─── System Prompt: Always-on memory instructions ──────────
+    // Injects MEMORY_INSTRUCTIONS into the system prompt of every message.
+    // This ensures the agent ALWAYS knows about Engram, even after compaction.
+
+    "experimental.chat.system.transform": async (_input, output) => {
+      output.system.push(MEMORY_INSTRUCTIONS)
+    },
+
+    // ─── Compaction Hook: Persist memory + inject context ──────────
     // Compaction is triggered by the system (not the agent) when context
     // gets too long. The old agent "dies" and a new one starts with the
     // compacted summary. This is our chance to:

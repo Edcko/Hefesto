@@ -1,122 +1,195 @@
 ---
 name: sdd-init
-description: Bootstrap SDD context in any project. Detects stack, conventions, and persistence backend.
-trigger: When user wants to initialize SDD in a project, or says "sdd init", "iniciar sdd"
-version: 1.0.0
+description: >
+  Initialize Spec-Driven Development context in any project. Detects stack, conventions, and bootstraps the active persistence backend.
+  Trigger: When user wants to initialize SDD in a project, or says "sdd init", "iniciar sdd", "openspec init".
+license: MIT
+metadata:
+  author: gentleman-programming
+  version: "2.0"
 ---
 
 ## Purpose
 
-Initialize Spec-Driven Development context in a project. Detect stack, conventions, and verify Engram availability.
+You are a sub-agent responsible for initializing the Spec-Driven Development (SDD) context in a project. You detect the project stack and conventions, then bootstrap the active persistence backend.
 
-## Protocol
+## Execution and Persistence Contract
 
-Follow `skills/_shared/phase-common.md` for skill loading and return envelope format.
+- If mode is `engram`:
+  Do NOT create `openspec/` directory.
 
----
+  **Save project context**:
+  ```
+  mem_save(
+    title: "sdd-init/{project-name}",
+    topic_key: "sdd-init/{project-name}",
+    type: "architecture",
+    project: "{project-name}",
+    content: "{detected project context markdown}"
+  )
+  ```
+  `topic_key` enables upserts — re-running init updates the existing context, not duplicates.
+
+  (See `skills/_shared/engram-convention.md` for full naming conventions.)
+- If mode is `openspec`: Read and follow `skills/_shared/openspec-convention.md`. Run full bootstrap.
+- If mode is `hybrid`: Read and follow BOTH convention files. Run openspec bootstrap AND persist context to Engram.
+- If mode is `none`: Return detected context without writing project files.
 
 ## What to Do
 
 ### Step 1: Detect Project Context
 
 Read the project to understand:
+- Tech stack (check package.json, go.mod, pyproject.toml, etc.)
+- Existing conventions (linters, test frameworks, CI)
+- Architecture patterns in use
 
-- **Tech stack** — check package.json, go.mod, pyproject.toml, Cargo.toml, etc.
-- **Framework** — Angular, React, Next.js, Django, FastAPI, etc.
-- **Build tool** — npm/pnpm/yarn, go build, cargo, etc.
-- **Test runner** — Jest, Vitest, pytest, go test, etc.
-- **Linting/formatting** — ESLint, Prettier, Black, gofmt, etc.
-- **Architecture patterns** — Clean, Hexagonal, Screaming, etc.
+### Step 2: Initialize Persistence Backend
 
-### Step 2: Check Engram Availability
+If mode resolves to `openspec`, create this directory structure:
 
-Attempt a test call to `mem_search`. If successful, Engram is active. If it fails, announce graceful degradation.
-
-### Step 3: Build Skill Registry
-
-1. **Scan user skills**: glob `*/SKILL.md` in `~/.config/opencode/skills/`, `~/.claude/skills/`, `~/.gemini/skills/`, `~/.cursor/skills/`, project's `skills/` directory
-2. **Scan project conventions**: check for `AGENTS.md`, `CLAUDE.md`, `.cursorrules`, `GEMINI.md` in project root
-3. **Write `.atl/skill-registry.md`** (create `.atl/` if needed) with format:
-
-```markdown
-# Skill Registry — {project}
-
-## Stack
-- Language: {detected}
-- Framework: {detected}
-- Build: {detected}
-- Test: {detected}
-
-## Coding Skills
-| Skill | Trigger | Path |
-|-------|---------|------|
-| {name} | {trigger} | {path} |
-
-## Project Conventions
-| File | Purpose |
-|------|---------|
-| {file} | {purpose} |
+```
+openspec/
+├── config.yaml              ← Project-specific SDD config
+├── specs/                   ← Source of truth (empty initially)
+└── changes/                 ← Active changes
+    └── archive/             ← Completed changes
 ```
 
-4. **If Engram available**, ALSO save: `mem_save(title: "skill-registry/{project}", topic_key: "skill-registry/{project}", type: "config", project: "{project}", content: "{registry}")`
+### Step 3: Generate Config (openspec mode)
 
-### Step 4: Persist Project Context
+Based on what you detected, create the config when in `openspec` mode:
 
-Save to Engram with topic_key for upsert:
+```yaml
+# openspec/config.yaml
+schema: spec-driven
 
+context: |
+  Tech stack: {detected stack}
+  Architecture: {detected patterns}
+  Testing: {detected test framework}
+  Style: {detected linting/formatting}
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Identify affected modules/packages
+  specs:
+    - Use Given/When/Then format for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group tasks by phase (infrastructure, implementation, testing)
+    - Use hierarchical numbering (1.1, 1.2, etc.)
+    - Keep tasks small enough to complete in one session
+  apply:
+    - Follow existing code patterns and conventions
+    - Load relevant coding skills for the project stack
+  verify:
+    - Run tests if test infrastructure exists
+    - Compare implementation against every spec scenario
+  archive:
+    - Warn before merging destructive deltas (large removals)
+```
+
+### Step 4: Build Skill Registry
+
+Follow the same logic as the `skill-registry` skill (`skills/skill-registry/SKILL.md`):
+
+1. Scan user skills: glob `*/SKILL.md` across ALL known skill directories. **User-level**: `~/.claude/skills/`, `~/.config/opencode/skills/`, `~/.gemini/skills/`, `~/.cursor/skills/`, `~/.copilot/skills/`, parent of this skill file. **Project-level**: `.claude/skills/`, `.gemini/skills/`, `.agent/skills/`, `skills/`. Skip `sdd-*`, `_shared`, `skill-registry`. Deduplicate by name (project-level wins). Read frontmatter triggers.
+2. Scan project conventions: check for `agents.md`, `AGENTS.md`, `CLAUDE.md` (project-level), `.cursorrules`, `GEMINI.md`, `copilot-instructions.md` in the project root. If an index file is found (e.g., `agents.md`), READ it and extract all referenced file paths — include both the index and its referenced files in the registry.
+3. **ALWAYS write `.atl/skill-registry.md`** in the project root (create `.atl/` if needed). This file is mode-independent — it's infrastructure, not an SDD artifact.
+4. If engram is available, **ALSO save to engram**: `mem_save(title: "skill-registry", topic_key: "skill-registry", type: "config", project: "{project}", content: "{registry markdown}")`
+
+See `skills/skill-registry/SKILL.md` for the full registry format and scanning details.
+
+### Step 5: Persist Project Context
+
+**This step is MANDATORY — do NOT skip it.**
+
+If mode is `engram`:
 ```
 mem_save(
-  title: "sdd-init/{project}",
-  topic_key: "sdd-init/{project}",
+  title: "sdd-init/{project-name}",
+  topic_key: "sdd-init/{project-name}",
   type: "architecture",
-  project: "{project}",
-  content: |
-    # Project Context — {project}
-    
-    ## Stack
-    - Language: {detected}
-    - Framework: {detected}
-    - Build: {detected}
-    - Test: {detected}
-    
-    ## Architecture
-    {detected patterns}
-    
-    ## Conventions
-    {detected conventions}
-    
-    ## Skill Registry
-    Path: .atl/skill-registry.md
-    Engram: skill-registry/{project}
+  project: "{project-name}",
+  content: "{your detected project context from Steps 1-4}"
 )
 ```
 
----
+If mode is `openspec` or `hybrid`: the config was already written in Step 3.
 
-## Return Envelope
+If mode is `hybrid`: also call `mem_save` as above (write to BOTH backends).
 
-```markdown
-## Status: {success|partial|failed}
+### Step 6: Return Summary
 
-## Executive Summary
-SDD initialized for {project}. Stack: {detected}. Persistence: {engram available| degraded}.
+Return a structured summary adapted to the resolved mode:
 
-## Artifacts
-- project-context: sdd-init/{project}
-- skill-registry: skill-registry/{project}
+#### If mode is `engram`:
 
-## Next Recommended
-sdd-plan — Ready to plan a change.
+Persist project context following `skills/_shared/engram-convention.md` with title and topic_key `sdd-init/{project-name}`.
 
-## Risks
-{None | "Engram unavailable — artifacts will not persist across sessions"}
+Return:
+```
+## SDD Initialized
+
+**Project**: {project name}
+**Stack**: {detected stack}
+**Persistence**: engram
+
+### Context Saved
+Project context persisted to Engram.
+- **Engram ID**: #{observation-id}
+- **Topic key**: sdd-init/{project-name}
+
+No project files created.
+
+### Next Steps
+Ready for /sdd-explore <topic> or /sdd-new <change-name>.
 ```
 
----
+#### If mode is `openspec`:
+```
+## SDD Initialized
+
+**Project**: {project name}
+**Stack**: {detected stack}
+**Persistence**: openspec
+
+### Structure Created
+- openspec/config.yaml ← Project config with detected context
+- openspec/specs/      ← Ready for specifications
+- openspec/changes/    ← Ready for change proposals
+
+### Next Steps
+Ready for /sdd-explore <topic> or /sdd-new <change-name>.
+```
+
+#### If mode is `none`:
+```
+## SDD Initialized
+
+**Project**: {project name}
+**Stack**: {detected stack}
+**Persistence**: none (ephemeral)
+
+### Context Detected
+{summary of detected stack and conventions}
+
+### Recommendation
+Enable `engram` or `openspec` for artifact persistence across sessions. Without persistence, all SDD artifacts will be lost when the conversation ends.
+
+### Next Steps
+Ready for /sdd-explore <topic> or /sdd-new <change-name>.
+```
 
 ## Rules
 
-- NEVER create `openspec/` directories — Hefesto uses Engram only
-- ALWAYS detect the real tech stack — don't guess
-- If Engram is unavailable, announce it but continue (graceful degradation)
-- Keep project context CONCISE — no more than 20 lines
+- NEVER create placeholder spec files - specs are created via sdd-spec during a change
+- ALWAYS detect the real tech stack, don't guess
+- If the project already has an `openspec/` directory, report what exists and ask the orchestrator if it should be updated
+- Keep config.yaml context CONCISE - no more than 10 lines
+- Return a structured envelope with: `status`, `executive_summary`, `detailed_report` (optional), `artifacts`, `next_recommended`, and `risks`

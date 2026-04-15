@@ -1,45 +1,68 @@
 ---
 name: remote-exec
-description: Execute commands on remote servers via SSH — DevOps/infrastructure operations
-trigger: When SSH, SCP, rsync, VPS, or remote server operations are needed
-version: 1.0.0
+description: >
+  Execute commands on remote servers via SSH. 
+  Trigger: When user needs to run commands on VPS, servers, or remote machines.
+license: Apache-2.0
+metadata:
+  author: gentleman-programming
+  version: "1.0"
 ---
 
 ## When to Use
 
-- Run commands on remote servers/VPS
-- Deploy or configure remote infrastructure
-- Debug issues on production or staging
-- Transfer files between local and remote
+- User asks to run commands on a remote server/VPS
+- User mentions SSH, scp, rsync, or remote file operations
+- User needs to debug issues on production or staging servers
+- User wants to deploy or configure remote infrastructure
 
 ## Safety Rules (MANDATORY)
 
-| Rule | Action |
+| Rule | Reason |
 |------|--------|
-| **Destructive commands** | ALWAYS confirm before: `rm -rf`, `DROP`, `TRUNCATE`, `mkfs`, `dd` |
-| **Production changes** | NEVER modify without explicit user approval |
-| **Authentication** | Use SSH keys, NEVER passwords in commands |
-| **Preview** | Show command BEFORE executing |
-| **Idempotency** | Prefer operations safe to run multiple times |
+| **ALWAYS confirm destructive commands** | `rm -rf`, `DROP DATABASE`, `truncate`, disk operations |
+| **NEVER modify production without explicit approval** | Ask user first, show exact command |
+| **Use SSH keys, NOT passwords** | Security best practice |
+| **Show command before execution** | User must see what will run |
+| **Prefer idempotent operations** | Safe to run multiple times |
 
-### Destructive Commands Requiring Confirmation
+### Destructive Commands Require Confirmation
 
-```text
-rm -rf, rmdir          # File deletes
-DROP, TRUNCATE, DELETE # Database operations
-mkfs, fdisk, dd        # Disk operations
-iptables -F, ufw disable # Firewall changes
-systemctl stop/disable  # Critical services
---force, -f (on prod)   # Force flags
+These commands MUST be confirmed by user before execution:
+- `rm -rf`, `rmdir` (recursive deletes)
+- `DROP`, `TRUNCATE`, `DELETE` (database operations)
+- `mkfs`, `fdisk`, `dd` (disk operations)
+- `iptables -F`, `ufw disable` (firewall changes)
+- `systemctl stop/disable` on critical services
+- Any command with `--force` or `-f` on production
+
+## SSH Connection Patterns
+
+### Basic SSH
+
+```bash
+# Connect to server
+ssh user@hostname
+
+# Connect with specific key
+ssh -i ~/.ssh/id_rsa user@hostname
+
+# Connect with specific port
+ssh -p 2222 user@hostname
+
+# Run single command
+ssh user@hostname "command"
+
+# Run multiple commands
+ssh user@hostname "cmd1 && cmd2 && cmd3"
 ```
-
-## Connection Patterns
 
 ### SSH Config (Recommended)
 
+Use `~/.ssh/config` for easier connections:
+
 ```
-# ~/.ssh/config
-Host production
+Host myserver
     HostName 192.168.1.100
     User admin
     Port 2222
@@ -47,163 +70,229 @@ Host production
     ServerAliveInterval 60
 ```
 
-Then: `ssh production`
+Then simply: `ssh myserver`
 
-### Basic Commands
+## Remote Command Execution
+
+### Execute and Capture Output
 
 ```bash
-# Single command
-ssh user@host "command"
+# Capture stdout
+ssh user@host "command" > output.txt
 
-# Specific key/port
-ssh -i ~/.ssh/key -p 2222 user@host "command"
+# Capture both stdout and stderr
+ssh user@host "command" 2>&1 | tee output.log
 
-# Multi-step (stop on error)
+# Store in variable
+result=$(ssh user@host "command")
+```
+
+### Multi-Step Sessions
+
+```bash
+# Chain commands (stop on error)
 ssh user@host "cd /app && git pull && npm install && pm2 restart"
 
-# Here-doc for complex scripts
+# Chain commands (continue on error)
+ssh user@host "cmd1; cmd2; cmd3"
+
+# Use here-doc for complex scripts
 ssh user@host << 'EOF'
   cd /var/www
   git pull origin main
   composer install --no-dev
   php artisan migrate --force
+  php artisan config:cache
 EOF
 ```
 
-### Connection Testing
+### Parallel Execution on Multiple Servers
 
 ```bash
-# Test connectivity
-ssh -o ConnectTimeout=5 user@host "echo connected"
+# Using GNU parallel
+parallel ssh {} "uptime" ::: server1 server2 server3
 
-# Check key auth works
-ssh -o BatchMode=yes -o ConnectTimeout=5 user@host "hostname"
+# Using shell loop (sequential)
+for server in server1 server2 server3; do
+  ssh $server "hostname && uptime" &
+done
+wait
+
+# Using pssh (parallel-ssh)
+pssh -h servers.txt "uptime"
 ```
 
 ## File Transfer
 
-### scp (Simple)
+### scp (Simple Copy)
 
 ```bash
-# Local → Remote
-scp file.txt user@host:/path/
+# Local to remote
+scp file.txt user@host:/path/to/destination/
 
-# Remote → Local
-scp user@host:/path/file.txt ./
+# Remote to local
+scp user@host:/path/to/file.txt ./local/
 
-# Directory recursive
-scp -r ./dir user@host:/remote/
+# Directory (recursive)
+scp -r ./local-dir user@host:/remote/path/
+
+# Using SSH config alias
+scp file.txt myserver:/tmp/
 ```
 
-### rsync (Recommended)
+### rsync (Recommended for Syncing)
 
 ```bash
-# Dry-run first!
+# Sync local to remote (dry-run first!)
 rsync -avz --dry-run ./src/ user@host:/dest/
 
-# Sync
+# Actually sync
 rsync -avz ./src/ user@host:/dest/
 
-# With excludes
-rsync -avz --exclude 'node_modules' --exclude '.git' ./src/ user@host:/dest/
-
-# Delete (CAUTION - confirm first!)
+# Sync with delete (CAUTION - confirm first!)
 rsync -avz --delete ./src/ user@host:/dest/
 
-# Resume large file
+# Sync with exclude
+rsync -avz --exclude 'node_modules' --exclude '.git' ./src/ user@host:/dest/
+
+# Resume interrupted transfer
 rsync -avz --partial --progress ./large-file user@host:/dest/
 ```
 
-## Common Operations
+## Reading Remote Files
+
+```bash
+# Cat a remote file
+ssh user@host "cat /path/to/file"
+
+# Check file exists
+ssh user@host "test -f /path/to/file && echo 'exists'"
+
+# Get file size
+ssh user@host "stat -c%s /path/to/file"
+
+# Tail logs in real-time
+ssh user@host "tail -f /var/log/app.log"
+
+# Grep remote file
+ssh user@host "grep 'error' /var/log/app.log | tail -20"
+```
+
+## Debugging Remote Issues
 
 ### System Health
 
 ```bash
-ssh user@host "df -h"              # Disk space
-ssh user@host "free -h"            # Memory
-ssh user@host "uptime && w"        # Load and users
-ssh user@host "docker ps"          # Container status
-ssh user@host "ss -tlnp"           # Open ports
-```
+# Check disk space
+ssh user@host "df -h"
 
-### Service Management
+# Check memory
+ssh user@host "free -h"
 
-```bash
-ssh user@host "systemctl status nginx"
-ssh user@host "sudo systemctl restart nginx"
-ssh user@host "journalctl -u nginx -n 100 --no-pager"
+# Check running processes
+ssh user@host "ps aux | grep node"
+
+# Check open ports
+ssh user@host "ss -tlnp"
+
+# Check system load
+ssh user@host "uptime && w"
 ```
 
 ### Log Analysis
 
 ```bash
-ssh user@host "tail -f /var/log/app.log"
-ssh user@host "grep 'ERROR' /var/log/app.log | tail -50"
-ssh user@host "journalctl -u myservice --since '1 hour ago'"
+# Recent errors
+ssh user@host "journalctl -u myservice -n 100 --no-pager"
+
+# Tail multiple logs
+ssh user@host "tail -f /var/log/app.log /var/log/nginx/error.log"
+
+# Search logs for pattern
+ssh user@host "grep -r 'ERROR' /var/log/ 2>/dev/null | tail -50"
+```
+
+### Network Debugging
+
+```bash
+# Test connectivity
+ssh user@host "curl -I https://example.com"
+
+# Check DNS
+ssh user@host "nslookup example.com"
+
+# Test port connectivity
+ssh user@host "nc -zv internal-host 3306"
+
+# Check firewall rules
+ssh user@host "iptables -L -n"
+```
+
+## Common Operations
+
+### Deployment Pattern
+
+```bash
+# Safe deployment sequence
+ssh user@host << 'EOF'
+  cd /var/www/app
+  git fetch origin
+  git diff --stat HEAD origin/main  # Show changes
+EOF
+
+# Ask user confirmation before continuing
+# Then:
+ssh user@host << 'EOF'
+  cd /var/www/app
+  git pull origin main
+  npm ci
+  npm run build
+  pm2 reload app
+  pm2 logs app --lines 20
+EOF
 ```
 
 ### Database Backup
 
 ```bash
 # Create backup
-ssh user@host "mysqldump -u user -p database > /tmp/backup_\$(date +%Y%m%d).sql"
+ssh user@host "mysqldump -u user -p database > /tmp/backup_$(date +%Y%m%d).sql"
 
-# Download
+# Download backup
 scp user@host:/tmp/backup_*.sql ./backups/
 ```
 
-## Output Handling
+### Service Management
 
 ```bash
-# Capture to variable
-result=$(ssh user@host "command")
+# Check service status
+ssh user@host "systemctl status nginx"
 
-# Capture stdout + stderr
-ssh user@host "command" 2>&1 | tee output.log
+# Restart service
+ssh user@host "sudo systemctl restart nginx"
 
-# Parse specific field
-ssh user@host "df -h /" | awk 'NR==2 {print $5}'  # Disk usage %
+# View service logs
+ssh user@host "journalctl -u nginx -f"
+```
+
+## Output Parsing Patterns
+
+```bash
+# Extract specific field
+ssh user@host "df -h /" | awk 'NR==2 {print $5}'  # Get use percentage
 
 # Parse JSON
 ssh user@host "cat /etc/config.json" | jq '.database.host'
+
+# Extract IPs from log
+ssh user@host "grep 'login' /var/log/auth.log" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | sort | uniq -c
 ```
 
-## Error Handling
+## Checklist Before Remote Execution
 
-```bash
-# Check exit code
-ssh user@host "command" && echo "Success" || echo "Failed: $?"
-
-# Capture and check
-output=$(ssh user@host "command" 2>&1)
-if [ $? -ne 0 ]; then
-  echo "Error: $output"
-fi
-```
-
-## Multi-Server Pattern
-
-```bash
-# Sequential loop
-for server in prod1 prod2 prod3; do
-  echo "=== $server ==="
-  ssh $server "hostname && uptime"
-done
-
-# Parallel (background)
-for server in prod1 prod2 prod3; do
-  ssh $server "uptime" &
-done
-wait
-
-# With pssh (if installed)
-pssh -h servers.txt "uptime"
-```
-
-## Pre-Execution Checklist
-
-- [ ] SSH key configured and tested
-- [ ] Command tested on staging first (if production)
-- [ ] Destructive commands confirmed by user
-- [ ] Output captured for review
+- [ ] SSH key is configured and working
+- [ ] Command tested in dry-run or on staging first
+- [ ] Destructive commands have user confirmation
+- [ ] Production changes have explicit user approval
+- [ ] Output is captured for review
 - [ ] Rollback plan exists for critical changes

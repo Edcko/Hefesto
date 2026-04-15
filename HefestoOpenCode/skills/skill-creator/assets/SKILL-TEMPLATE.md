@@ -2,8 +2,11 @@
 name: {skill-name}
 description: >
   {Brief description of what this skill enables}.
-  Trigger: {When the AI should load this skill - be specific with keywords/context}.
-version: 1.0.0
+  Trigger: {When the AI should load this skill - be specific}.
+license: Apache-2.0
+metadata:
+  author: gentleman-programming
+  version: "1.0"
 ---
 
 ## When to Use
@@ -35,11 +38,11 @@ Use this skill when:
 
 ## Decision Tree
 
-| Question | Action |
-|----------|--------|
-| {Question 1}? | {Action A} |
-| {Question 2}? | {Action B} |
-| Otherwise | {Default action} |
+```
+{Question 1}? → {Action A}
+{Question 2}? → {Action B}
+Otherwise    → {Default action}
+```
 
 ---
 
@@ -64,11 +67,12 @@ Use this skill when:
 ```bash
 {command 1}  # {description}
 {command 2}  # {description}
+{command 3}  # {description}
 ```
 
 ---
 
 ## Resources
 
-- **Templates**: [assets/](assets/) - {description}
-- **Docs**: [references/](references/) - {local doc links}
+- **Templates**: See [assets/](assets/) for {description of templates}
+- **Documentation**: See [references/](references/) for local developer guide links
