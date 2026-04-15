@@ -358,11 +358,12 @@ func (a *App) handleScreenTransition(msg ScreenTransitionMsg) (tea.Model, tea.Cm
 
 		// Pass OpenCode CLI install tracking from install screen
 		if a.install != nil {
-			attempted, success, version, errMsg := a.install.GetOpenCodeInstallStatus()
+			attempted, success, version, errMsg, alreadyInstalled := a.install.GetOpenCodeInstallStatus()
 			complete.OpenCodeInstallAttempted = attempted
 			complete.OpenCodeInstallSuccess = success
 			complete.OpenCodeInstallVersion = version
 			complete.OpenCodeInstallError = errMsg
+			complete.OpenCodeWasAlreadyInstalled = alreadyInstalled
 		}
 
 		a.complete = complete

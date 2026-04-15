@@ -128,8 +128,8 @@ func TestCompleteViewContainsExpectedContent(t *testing.T) {
 		{"component engram", "Engram"},
 		{"component background agents", "Background agents"},
 		{"component plugins", "Plugins"},
-		{"start using opencode", "opencode"},
-		{"check status hefesto", "hefesto status"},
+		{"next steps header", "Next Steps:"},
+		{"hefesto status", "hefesto status"},
 		{"forge on message", "Forge on"},
 		{"exit key in help bar", "q"},
 	}
@@ -143,6 +143,98 @@ func TestCompleteViewContainsExpectedContent(t *testing.T) {
 				t.Errorf("View() missing expected content %q", tt.contains)
 			}
 		})
+	}
+}
+
+func TestCompleteViewFreshInstallShowsSourceStep(t *testing.T) {
+	m := NewCompleteModel("~/.config/opencode/", 80, 40)
+	m.OpenCodeInstallAttempted = true
+	m.OpenCodeInstallSuccess = true
+	m.OpenCodeInstallVersion = "1.0.0"
+	m.OpenCodeWasAlreadyInstalled = false
+
+	view := m.View()
+
+	// Fresh install should show source step and numbered steps
+	if !strings.Contains(view, "1.") {
+		t.Error("View() missing numbered step '1.' for fresh install")
+	}
+	if !strings.Contains(view, "2.") {
+		t.Error("View() missing numbered step '2.' for fresh install")
+	}
+	if !strings.Contains(view, "source") {
+		t.Error("View() missing 'source' command for fresh install")
+	}
+	if !strings.Contains(view, "required!") {
+		t.Error("View() missing '(required!)' hint for source step")
+	}
+	if !strings.Contains(view, "OpenCode CLI installed") {
+		t.Error("View() missing 'OpenCode CLI installed' for successful install")
+	}
+	if !strings.Contains(view, "opencode") {
+		t.Error("View() missing 'opencode' command")
+	}
+}
+
+func TestCompleteViewAlreadyInstalledSkipsSource(t *testing.T) {
+	m := NewCompleteModel("~/.config/opencode/", 80, 40)
+	m.OpenCodeInstallAttempted = true
+	m.OpenCodeInstallSuccess = true
+	m.OpenCodeInstallVersion = "1.0.0"
+	m.OpenCodeWasAlreadyInstalled = true
+
+	view := m.View()
+
+	// Already installed should NOT show source step
+	if strings.Contains(view, "source") {
+		t.Error("View() should NOT show 'source' when OpenCode was already installed")
+	}
+	if strings.Contains(view, "required!") {
+		t.Error("View() should NOT show '(required!)' hint when OpenCode was already installed")
+	}
+	if !strings.Contains(view, "$ opencode") {
+		t.Error("View() missing '$ opencode' run prompt for already installed")
+	}
+}
+
+func TestCompleteViewFailedInstallShowsFallback(t *testing.T) {
+	m := NewCompleteModel("~/.config/opencode/", 80, 40)
+	m.OpenCodeInstallAttempted = true
+	m.OpenCodeInstallSuccess = false
+	m.OpenCodeInstallError = "OpenCode CLI install failed (non-fatal): connection refused"
+
+	view := m.View()
+
+	// Failed install should show curl fallback and numbered steps
+	if !strings.Contains(view, "Install OpenCode CLI manually:") {
+		t.Error("View() missing manual install prompt for failed install")
+	}
+	if !strings.Contains(view, "curl -fsSL https://opencode.ai/install | bash") {
+		t.Error("View() missing curl command for failed install")
+	}
+	if !strings.Contains(view, "1.") {
+		t.Error("View() missing numbered step '1.' for failed install fallback")
+	}
+	if !strings.Contains(view, "source") {
+		t.Error("View() missing 'source' step in failed install fallback")
+	}
+}
+
+func TestCompleteViewNoInstallAttemptedShowsSimplePrompt(t *testing.T) {
+	m := NewCompleteModel("~/.config/opencode/", 80, 40)
+	// OpenCodeInstallAttempted is false by default
+
+	view := m.View()
+
+	// No install attempted — should show simple "Run $ opencode" prompt
+	if !strings.Contains(view, "$ opencode") {
+		t.Error("View() missing '$ opencode' for no-install-attempt case")
+	}
+	if strings.Contains(view, "source") {
+		t.Error("View() should NOT show 'source' when no install was attempted")
+	}
+	if strings.Contains(view, "required!") {
+		t.Error("View() should NOT show '(required!)' when no install was attempted")
 	}
 }
 

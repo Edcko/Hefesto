@@ -23,10 +23,11 @@ type CompleteModel struct {
 	InstalledComponents []InstalledComponent
 
 	// OpenCode CLI install status from the install screen
-	OpenCodeInstallAttempted bool
-	OpenCodeInstallSuccess   bool
-	OpenCodeInstallVersion   string
-	OpenCodeInstallError     string
+	OpenCodeInstallAttempted    bool
+	OpenCodeInstallSuccess      bool
+	OpenCodeInstallVersion      string
+	OpenCodeInstallError        string
+	OpenCodeWasAlreadyInstalled bool // true when OpenCode was present before this run
 }
 
 // InstalledComponent represents an installed item
@@ -104,30 +105,83 @@ func (m *CompleteModel) View() string {
 	b.WriteString(CenterText(AmberText(durationStr), width))
 	b.WriteString(strings.Repeat("\n", SpaceXS))
 
-	// Next steps — compact single-line format
+	// Next Steps — prominent, numbered actions
+	b.WriteString(CenterText(AmberText("Next Steps:"), width))
+	b.WriteString("\n")
+
+	// Show OpenCode CLI install status and version info
 	if m.OpenCodeInstallAttempted && m.OpenCodeInstallSuccess {
 		versionInfo := ""
 		if m.OpenCodeInstallVersion != "" {
 			versionInfo = fmt.Sprintf(" v%s", m.OpenCodeInstallVersion)
 		}
-		b.WriteString(CenterText(GreenText(fmt.Sprintf("%s OpenCode CLI installed%s", IconCheck, versionInfo)), width))
+		b.WriteString(CenterText(
+			fmt.Sprintf("%s %s%s", GreenText(IconCheck), WhiteText("OpenCode CLI installed"), GrayText(versionInfo)),
+			width,
+		))
 		b.WriteString("\n")
+	}
 
-		// Tell the user to reload their shell so PATH picks up the new binary.
-		// The installer added ~/.opencode/bin to .bashrc/.zshrc but the current
-		// session doesn't have it yet.
+	// When OpenCode was freshly installed, PATH needs to be refreshed
+	if m.OpenCodeInstallAttempted && m.OpenCodeInstallSuccess && !m.OpenCodeWasAlreadyInstalled {
 		rcHint := getRCHint()
-		b.WriteString(CenterText(CopperText("Run")+AmberText(fmt.Sprintf(" $ source %s", rcHint))+CopperText(" or open a new terminal"), width))
+		b.WriteString(CenterText(
+			fmt.Sprintf("  %s %s  %s",
+				AmberText("1."),
+				AmberText(fmt.Sprintf("source %s", rcHint)),
+				CopperText("← refreshes PATH (required!)"),
+			),
+			width,
+		))
+		b.WriteString("\n")
+		b.WriteString(CenterText(
+			fmt.Sprintf("  %s %s  %s",
+				AmberText("2."),
+				AmberText("opencode"),
+				CopperText("← start coding!"),
+			),
+			width,
+		))
+		b.WriteString("\n")
+	} else if m.OpenCodeInstallAttempted && !m.OpenCodeInstallSuccess && m.OpenCodeInstallError != "" {
+		// Install failed — show manual fallback
+		b.WriteString(CenterText(
+			AmberText("  Install OpenCode CLI manually:"),
+			width,
+		))
+		b.WriteString("\n")
+		b.WriteString(CenterText(
+			AmberText("    curl -fsSL https://opencode.ai/install | bash"),
+			width,
+		))
+		b.WriteString("\n")
+		b.WriteString(CenterText(
+			fmt.Sprintf("  %s %s  %s",
+				AmberText("1."),
+				AmberText(fmt.Sprintf("source %s", getRCHint())),
+				CopperText("← refreshes PATH"),
+			),
+			width,
+		))
+		b.WriteString("\n")
+		b.WriteString(CenterText(
+			fmt.Sprintf("  %s %s  %s",
+				AmberText("2."),
+				AmberText("opencode"),
+				CopperText("← start coding!"),
+			),
+			width,
+		))
+		b.WriteString("\n")
+	} else {
+		// Already installed or not attempted — simple prompt
+		b.WriteString(CenterText(
+			CopperText("Run")+AmberText(" $ opencode")+CopperText(" to start"),
+			width,
+		))
 		b.WriteString("\n")
 	}
 
-	if m.OpenCodeInstallAttempted && !m.OpenCodeInstallSuccess && m.OpenCodeInstallError != "" {
-		b.WriteString(CenterText(AmberText("Install OpenCode: curl -fsSL https://opencode.ai/install | bash"), width))
-		b.WriteString("\n")
-	}
-
-	b.WriteString(CenterText(CopperText("Run")+AmberText(" $ opencode")+CopperText(" to start"), width))
-	b.WriteString("\n")
 	b.WriteString(CenterText(CopperText("Run")+AmberText(" $ hefesto status")+CopperText(" to check"), width))
 	b.WriteString(strings.Repeat("\n", SpaceXS))
 

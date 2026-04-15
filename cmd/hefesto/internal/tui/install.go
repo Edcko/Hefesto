@@ -72,10 +72,11 @@ type InstallModel struct {
 	verifyResult *install.VerifyResult
 
 	// OpenCode CLI install tracking for the complete screen
-	openCodeInstallAttempted bool   // Whether we attempted to install OpenCode CLI
-	openCodeInstallSuccess   bool   // Whether the install succeeded
-	openCodeInstallVersion   string // Version that was installed (or detected)
-	openCodeInstallError     string // Error message if install failed
+	openCodeInstallAttempted    bool   // Whether we attempted to install OpenCode CLI
+	openCodeInstallSuccess      bool   // Whether the install succeeded
+	openCodeInstallVersion      string // Version that was installed (or detected)
+	openCodeInstallError        string // Error message if install failed
+	openCodeWasAlreadyInstalled bool   // Whether OpenCode was already present before install
 }
 
 // StepCompleteMsg signals a step has completed
@@ -166,8 +167,8 @@ func (m *InstallModel) Init() tea.Cmd {
 
 // GetOpenCodeInstallStatus returns the OpenCode CLI install tracking state
 // so the complete screen can show the appropriate message.
-func (m *InstallModel) GetOpenCodeInstallStatus() (attempted, success bool, version, errMsg string) {
-	return m.openCodeInstallAttempted, m.openCodeInstallSuccess, m.openCodeInstallVersion, m.openCodeInstallError
+func (m *InstallModel) GetOpenCodeInstallStatus() (attempted, success bool, version, errMsg string, alreadyInstalled bool) {
+	return m.openCodeInstallAttempted, m.openCodeInstallSuccess, m.openCodeInstallVersion, m.openCodeInstallError, m.openCodeWasAlreadyInstalled
 }
 
 // runStep executes a single installation step
@@ -362,6 +363,9 @@ func (m *InstallModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Parse result from message
 				if containsStr(msg.Message, "installed") && !containsStr(msg.Message, "failed") {
 					m.openCodeInstallSuccess = true
+				}
+				if containsStr(msg.Message, "already installed") {
+					m.openCodeWasAlreadyInstalled = true
 				}
 				// Extract version if present
 				if v := extractVersionFromMsg(msg.Message); v != "" {
