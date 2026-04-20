@@ -65,6 +65,11 @@ interface DelegationProgress {
   lastMessageAt?: Date
 }
 
+interface DelegationResult {
+  publicSummary: string
+  rawResult: string
+}
+
 interface Delegation {
   id: string // Human-readable ID (e.g., "swift-falcon")
   sessionID: string
@@ -81,6 +86,8 @@ interface Delegation {
   title?: string
   description?: string
   result?: string
+  publicSummary?: string // Sanitized, concise summary for parent notifications
+  rawResult?: string // Complete, unfiltered output for explicit retrieval
 }
 
 interface DelegateInput {
@@ -125,6 +132,50 @@ function generateTitle(prompt: string): string {
  */
 function generateDescription(content: string): string {
   return content.slice(0, 147).trim() + (content.length > 147 ? "..." : "")
+}
+
+/**
+ * Sanitize raw sub-agent output into a concise public summary.
+ * Strips reasoning blocks, tool-call noise, and internal patterns
+ * to produce a clean summary suitable for parent-thread notifications.
+ */
+function sanitizePublicSummary(rawText: string): string {
+  let text = rawText
+
+  // Strip <thinking>...</thinking> blocks (greedy, multiline)
+  text = text.replace(/<thinking>[\s\S]*?<\/thinking>/gi, "")
+
+  // Strip <tool-call>...</tool-call> blocks (greedy, multiline)
+  text = text.replace(/<tool-call>[\s\S]*?<\/tool-call>/gi, "")
+
+  // Strip lines starting with common internal reasoning patterns
+  text = text
+    .split("\n")
+    .filter((line) => {
+      const trimmed = line.trim()
+      // Strip blockquote-style "Thinking" / "Analyzing" lines
+      if (/^>\s*\*Thinking\*/i.test(trimmed)) return false
+      if (/^>\s*\*Analyzing\*/i.test(trimmed)) return false
+      // Strip "Let me..." internal reasoning starts
+      if (/^Let me\s/i.test(trimmed)) return false
+      return true
+    })
+    .join("\n")
+
+  // Trim and collapse whitespace
+  text = text.trim().replace(/\n{3,}/g, "\n\n")
+
+  // Truncate to 800 characters
+  if (text.length > 800) {
+    text = text.slice(0, 797).trimEnd() + "..."
+  }
+
+  // Fallback if empty after sanitization
+  if (!text || text.trim().length === 0) {
+    return "Task completed — no structured result produced"
+  }
+
+  return text
 }
 
 /**
@@ -409,8 +460,11 @@ class DelegationManager {
       await this.client.session.delete({ path: { id: delegation.sessionID } })
     } catch {}
 
-    const result = await this.getResult(delegation)
-    await this.persistOutput(delegation, `${result}\n\n[TIMEOUT REACHED]`)
+    const { publicSummary, rawResult } = await this.getResult(delegation)
+    delegation.publicSummary = publicSummary
+    delegation.rawResult = rawResult
+    delegation.result = rawResult
+    await this.persistOutput(delegation, `${rawResult}\n\n[TIMEOUT REACHED]`)
     await this.notifyParent(delegation)
   }
 
@@ -424,18 +478,21 @@ class DelegationManager {
     delegation.status = "complete"
     delegation.completedAt = new Date()
 
-    const result = await this.getResult(delegation)
-    delegation.result = result
-    delegation.description = generateDescription(result)
+    const { publicSummary, rawResult } = await this.getResult(delegation)
+    delegation.publicSummary = publicSummary
+    delegation.rawResult = rawResult
+    delegation.result = rawResult // Backward compatibility
+    delegation.description = generateDescription(publicSummary)
 
-    await this.persistOutput(delegation, result)
+    await this.persistOutput(delegation, rawResult)
     await this.notifyParent(delegation)
   }
 
   /**
    * Get result from delegation's session.
+   * Returns a two-tier result: publicSummary (cleaned) and rawResult (full).
    */
-  private async getResult(delegation: Delegation): Promise<string> {
+  private async getResult(delegation: Delegation): Promise<DelegationResult> {
     try {
       const messages = await this.client.session.messages({
         path: { id: delegation.sessionID },
@@ -443,7 +500,10 @@ class DelegationManager {
 
       const messageData = messages.data as SessionMessageItem[] | undefined
       if (!messageData || messageData.length === 0) {
-        return `Delegation completed but produced no output.`
+        return {
+          rawResult: "Delegation completed but produced no output.",
+          publicSummary: "Task completed — no structured result produced",
+        }
       }
 
       const assistantMessages = messageData.filter(
@@ -451,21 +511,45 @@ class DelegationManager {
       )
 
       if (assistantMessages.length === 0) {
-        return `Delegation completed but produced no assistant response.`
+        return {
+          rawResult: "Delegation completed but produced no assistant response.",
+          publicSummary: "Task completed — no structured result produced",
+        }
       }
 
+      // Raw result: all assistant messages' text parts joined (full output)
+      const allTextParts: string[] = []
+      for (const msg of assistantMessages) {
+        const textParts = msg.parts.filter((p): p is TextPart => p.type === "text")
+        for (const p of textParts) {
+          allTextParts.push(p.text)
+        }
+      }
+      const rawResult = allTextParts.join("\n")
+
+      // Public summary: sanitize the last assistant message only (the actual answer)
       const lastMessage = assistantMessages[assistantMessages.length - 1]
-      const textParts = lastMessage.parts.filter((p): p is TextPart => p.type === "text")
+      const lastTextParts = lastMessage.parts.filter((p): p is TextPart => p.type === "text")
+      const lastText = lastTextParts.map((p) => p.text).join("\n")
 
-      if (textParts.length === 0) {
-        return `Delegation completed but produced no text content.`
+      if (!lastText.trim()) {
+        return {
+          rawResult: rawResult || "Delegation completed but produced no text content.",
+          publicSummary: "Task completed — no structured result produced",
+        }
       }
 
-      return textParts.map((p) => p.text).join("\n")
+      const publicSummary = sanitizePublicSummary(lastText)
+
+      return { publicSummary, rawResult }
     } catch (error) {
-      return `Delegation completed but result could not be retrieved: ${
+      const fallback = `Delegation completed but result could not be retrieved: ${
         error instanceof Error ? error.message : "Unknown error"
       }`
+      return {
+        rawResult: fallback,
+        publicSummary: "Task completed — result could not be retrieved",
+      }
     }
   }
 
@@ -498,6 +582,7 @@ ${delegation.description || "(No description)"}
 
   /**
    * Notify parent session (batched).
+   * Uses publicSummary (clean, concise) instead of raw full output.
    */
   private async notifyParent(delegation: Delegation): Promise<void> {
     try {
@@ -511,11 +596,10 @@ ${delegation.description || "(No description)"}
         this.pendingByParent.delete(delegation.parentSessionID)
       }
 
-      // Build summary from result — send full content (aligned with Gentleman.Dots)
-      const fullResult = delegation.result || delegation.error || "(No result)"
-      let summary = fullResult
+      // Use publicSummary for notification — clean, concise, no raw reasoning noise
+      const summary = delegation.publicSummary || delegation.error || "(No result)"
 
-      // Send completion notification with inline summary
+      // Send completion notification with clean public summary
       const notification = `[TASK NOTIFICATION]
 ID: ${delegation.id}
 Status: ${delegation.status}
@@ -523,7 +607,9 @@ Agent: ${delegation.title || delegation.id}${delegation.error ? `\nError: ${dele
 
 Summary:
 
-${summary}`
+${summary}
+
+> Use \`delegation_read("${delegation.id}")\` to retrieve full output.`
 
       await this.client.session.prompt({
         path: { id: delegation.parentSessionID },
@@ -678,8 +764,10 @@ Use this for:
 - Parallel work that can run in background
 - Any task where you want persistent, retrievable output
 
-On completion, a notification arrives with an inline summary of the result.
-Use \`delegation_read(id)\` only if you need the full output. Results are persisted to disk and survive compaction.`,
+Hybrid UX: On completion, you receive a clean, concise summary in the notification.
+The full raw output (including reasoning, tool calls) is persisted to disk.
+Use \`delegation_read(id)\` only when you need the complete output.
+Results survive compaction.`,
     args: {
       prompt: tool.schema
         .string()
@@ -724,8 +812,9 @@ Use \`delegation_read(id)\` only if you need the full output. Results are persis
 
 function createDelegationRead(manager: DelegationManager): ReturnType<typeof tool> {
   return tool({
-    description: `Read the output of a delegation by its ID.
-Use this to retrieve results from delegated tasks if the inline notification was lost during compaction.`,
+    description: `Read the full output of a delegation by its ID.
+Returns the complete, unfiltered result including all reasoning chains and tool-call details.
+Notifications only show a concise summary — use this to access the full output.`,
     args: {
       id: tool.schema.string().describe("The delegation ID (e.g., 'swift-falcon')"),
     },
@@ -797,8 +886,16 @@ const DELEGATION_RULES = `<task-notification>
 
 You have tools for parallel background work:
 - \`delegate(prompt, agent)\` - Launch background task, returns ID immediately
-- \`delegation_read(id)\` - Retrieve completed result
+- \`delegation_read(id)\` - Retrieve full completed result
 - \`delegation_list()\` - List delegations (use sparingly)
+
+## Hybrid UX: Clean Summaries + On-Demand Full Output
+
+Delegation notifications use a **two-tier output model**:
+1. **Public summary** — A concise, sanitized notification arrives in the parent thread. This strips internal reasoning chains, thinking blocks, and tool-call noise.
+2. **Full raw output** — The complete, unfiltered result is persisted to disk. Use \`delegation_read(id)\` to retrieve it when you need the full detail.
+
+Notifications include the delegation ID so you can retrieve the full output at any time.
 
 ## When to Use delegate vs task
 
@@ -813,8 +910,8 @@ Any agent can be used with \`delegate\`. Results survive context compaction.
 
 1. Call \`delegate(prompt, agent)\` with a detailed prompt and agent name
 2. Continue productive work while it runs in the background
-3. Receive a \`<task-notification>\` when complete (includes summary inline)
-4. If you need the full output, use \`delegation_read(id)\` — the notification includes the ID
+3. Receive a \`<task-notification>\` with a **clean summary** when complete
+4. If you need the full output (reasoning, tool calls, everything), use \`delegation_read(id)\`
 
 ## Critical Constraints
 

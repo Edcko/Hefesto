@@ -53,10 +53,10 @@
       },
       "prompt": "{file:~/.config/opencode/AGENTS.md}",
       "tools": {
-        "bash": true,
-        "edit": true,
+        "bash": false,
+        "edit": false,
         "read": true,
-        "write": true
+        "write": false
       }
     },
     "sdd-init": {
