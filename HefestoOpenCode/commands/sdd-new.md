@@ -1,6 +1,6 @@
 ---
 agent: sdd-orchestrator
-description: Start a NEW change — triggers plan phase (exploration + proposal)
+description: Start a change — classify the request, route it, write its plan
 ---
 
 ## Context
@@ -8,36 +8,29 @@ description: Start a NEW change — triggers plan phase (exploration + proposal)
 - **Change Name**: {args}
 - **Working Directory**: {cwd}
 - **Project**: {project}
-- **Persistence**: Engram only
+- **Plan**: `.hefesto/{args}/plan.json`
 
 ## Task
 
-Start the **plan phase** for change `{args}`. This phase MERGES exploration and proposal:
+Start the change `{args}` under the methodology it is routed to.
 
-1. **Explore**: Investigate the codebase to understand current state, affected modules, and constraints.
+1. **Classify** — report the three facts, one line each:
+   - **Type** — `known`, `ambiguous_behavior`, `unknown_domain`, `unvalidated_idea`
+   - **Size** — `small` or `large`
+   - **Risk** — `none`, `data`, `security`, `contract`, `concurrency`, `delivery`, `untestable`
 
-2. **Propose**: Create a change proposal with:
-   - Intent (what and why)
-   - Scope (files/modules affected)
-   - Approach (high-level implementation strategy)
-   - Risks and rollback plan
+2. **Route and write the plan** — the command decides the profile, never you:
 
-3. **Persist**: Save plan to Engram:
-   ```
-   mem_save(
-     title: "sdd/{args}/plan",
-     topic_key: "sdd/{args}/plan",
-     type: "architecture",
-     project: "{project}",
-     content: "{plan content}"
-   )
+   ```bash
+   hefesto route --type <type> --size <size> --risk <risk> --change {args} \
+     --write-plan .hefesto/{args}/plan.json
    ```
 
-4. **Return Summary**: Plan created, ready for `/sdd-ff` (skip to tasks) or `/sdd-spec` (detailed specs).
+3. **Report** — the profile, the verification tier, the artifacts the profile
+   owes and the rationale.
 
 ## Instructions
 
-- First: `mem_search(query: "sdd-init/{project}", project: "{project}")` → get project context
-- Load skill: `~/.hefesto/skills/sdd-plan/SKILL.md` for plan phase instructions
-- Load skill: `~/.hefesto/skills/_shared/phase-common.md` for return envelope
-- Return structured envelope: `status`, `executive_summary`, `artifacts`, `next_recommended`, `risks`
+- Load skill: `~/.config/opencode/skills/profile-route/SKILL.md`
+- Never pick the profile yourself; classify honestly and let the command decide
+- `next_recommended`: `/sdd-ff {args}` (planning artifacts) or `/sdd-apply {args}` (straight to work)

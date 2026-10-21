@@ -1,50 +1,38 @@
 ---
 agent: sdd-orchestrator
-description: Validate implementation against specs — auto-export on PASS
+description: Validate a change against its contract and report the result
 ---
 
 ## Context
 
-- **Change Name**: {args} (if empty, use active change from recent apply-progress)
+- **Change Name**: {args}
 - **Working Directory**: {cwd}
 - **Project**: {project}
-- **Persistence**: Engram only
+- **Plan**: `.hefesto/{args}/plan.json`
 
 ## Task
 
-Verify implementation for change `{args}`:
+Validate `{args}` against the contract of its profile:
 
-1. **Load Artifacts** (CRITICAL: use `mem_get_observation` for full content):
-   - `mem_search(query: "sdd/{args}/spec")` → get ID → `mem_get_observation(id)`
-   - `mem_search(query: "sdd/{args}/tasks")` → get ID → `mem_get_observation(id)`
-   - `mem_search(query: "sdd/{args}/apply-progress")` → get ID → `mem_get_observation(id)`
+```bash
+hefesto verify-plan .hefesto/{args}/plan.json
+```
 
-2. **Validate Each Scenario**:
-   - Compare implementation against every Given/When/Then scenario
-   - Run tests if test infrastructure exists
-   - Check that all tasks are marked `[x]`
+The command reports every rule the plan breaks and exits non-zero while work
+is outstanding. Turn its report into the verdict:
 
-3. **Generate Report**:
-   - PASS: All scenarios satisfied, all tasks complete
-   - PARTIAL: Some scenarios met, issues documented
-   - FAIL: Critical gaps found
+- **exit 0** — PASS: every promised artifact is present, complete, ordered,
+  and every scenario has a verification.
+- **exit non-zero** — FAIL: report the broken rules and hand the fixes back to
+  `/sdd-apply {args}`.
 
-4. **Persist Report**:
-   ```
-   mem_save(
-     title: "sdd/{args}/verify-report",
-     topic_key: "sdd/{args}/verify-report",
-     type: "architecture",
-     project: "{project}",
-     content: "{verification report}"
-   )
-   ```
-
-5. **Auto-Export on PASS**: If verification passes, export summary to user and mark change as complete.
+The contract checks completeness, not quality: a passing plan can still hold
+a bad specification. Say so in the report when the content warrants it.
 
 ## Instructions
 
-- Load skill: `~/.hefesto/skills/sdd-verify/SKILL.md` for verification workflow
-- Load: `~/.hefesto/skills/_shared/phase-common.md` for return envelope
-- Return: status (PASS/PARTIAL/FAIL), scenario results, issues found
-- `next_recommended`: Fix issues (if PARTIAL/FAIL) or start new change (if PASS)
+- Load skill: `~/.config/opencode/skills/profile-execute/SKILL.md`
+- Save lessons and decisions to Engram as memory; the verdict belongs to the
+  report, not to a topic key
+- Return structured envelope: `status` (PASS/FAIL), `executive_summary`, the
+  broken rules (if any), `next_recommended`, `risks`

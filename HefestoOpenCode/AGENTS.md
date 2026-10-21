@@ -147,12 +147,12 @@ Remote server operations (SSH, scp, rsync, VPS management) → launch `remote-ex
 | Resume existing session (`task_id`) | Results must SURVIVE compaction |
 | **SDD phases (sequential, each depends on previous)** | Independent parallel background tasks |
 
-### 🔧 Tool Selection for SDD Phases
+### 🔧 Tool Selection for the Profile Flow
 
-SDD phases are **SEQUENTIAL** — each phase depends on the previous result (explore → propose → spec → design → tasks → apply → verify → archive).
+The flow is sequential — each artifact depends on the previous one.
 
-→ **ALWAYS use `task` (sync) for ALL SDD phases** (`sdd-explore`, `sdd-propose`, `sdd-spec`, `sdd-design`, `sdd-tasks`, `sdd-apply`, `sdd-verify`, `sdd-archive`). NEVER use `delegate`.
-→ `delegate` is ONLY for non-SDD parallel background work.
+→ **ALWAYS use `task` (sync) for profile phase work** (`/sdd-new`, `/sdd-ff`, `/sdd-apply`, `/sdd-verify`, `/route`, `/execute`). NEVER use `delegate`.
+→ `delegate` is ONLY for independent parallel background work.
 → The `task` tool returns results inline — you see the output immediately.
 
 > For sub-agent tool usage, follow the system-injected rules. The `task` tool returns results inline; the `delegate` tool returns readable IDs for async retrieval.
@@ -167,83 +167,42 @@ Sub-agents: `sdd-init`, `sdd-explore`, `sdd-propose`, `sdd-plan`, `sdd-spec`, `s
 
 ## SDD Workflow
 
-Spec-Driven Development — structured planning for substantial changes.
+Spec-driven development is the **spec-first profile** of the methodology router. One flow, one artifact store.
 
-### Phases
+### The flow
 
 ```
-init → explore → propose → spec → tasks → apply → verify → archive
-                             ^
-                             |
-                           design (optional)
+/sdd-new <change>   → classify the request, route it, write .hefesto/<change>/plan.json
+/sdd-ff <change>    → loop through the planning artifacts, stop before implementation
+/sdd-apply <change> → loop through implementation and verification, to the close
+/sdd-verify <change>→ validate the plan against the contract and report PASS/FAIL
 ```
 
-**init**: Bootstrap | **explore**: Investigate idea & constraints | **propose**: Change proposal with scope & risks | **plan**: Explore + propose (merged shortcut) | **spec**: Requirements with testable scenarios | **design**: Architecture decisions (on-demand) | **tasks**: Implementation breakdown | **apply**: Execute tasks | **verify**: Validate against specs | **archive**: Close & persist final state
-
-Granular phases (`sdd-explore`, `sdd-propose`) preferred for step-by-step. Use `sdd-plan` for single-shot explore+propose merge.
-
-### Commands
-
-- `/sdd-init` → Bootstrap project context
-- `/sdd-explore <topic>` → Explore idea and constraints
-- `/sdd-new <change>` → Explore then propose (meta-command)
-- `/sdd-continue [change]` → Create next missing artifact in dependency chain (meta-command)
-- `/sdd-ff [change]` → propose → spec → design → tasks (meta-command)
-- `/sdd-apply [change]` → Implement tasks in batches
-- `/sdd-verify [change]` → Validate implementation
-- `/sdd-archive [change]` → Close and persist final state
-- `/sdd-new`, `/sdd-continue`, and `/sdd-ff` are meta-commands handled by the orchestrator. Do NOT invoke them as skills.
-
-### Command → Skill Mapping
-
-- `/sdd-init` → `sdd-init`
-- `/sdd-explore` → `sdd-explore`
-- `/sdd-new` → `sdd-explore` then `sdd-propose`
-- `/sdd-continue` → next needed from `sdd-propose`, `sdd-spec`, `sdd-design`, `sdd-tasks`
-- `/sdd-ff` → `sdd-propose` → `sdd-spec` → `sdd-design` → `sdd-tasks`
-- `/sdd-apply` → `sdd-apply`
-- `/sdd-verify` → `sdd-verify`
-- `/sdd-archive` → `sdd-archive`
+- The profile is **computed by `hefesto route`**, never chosen by taste. You classify (type, size, risk); the binary decides.
+- The runner (`hefesto next`) orders the work: `produce`, `complete` or `close`.
+- **The run advances on a recorded artifact, never on a promise.**
+- `hefesto verify-plan` closes the run; its exit 0 is the definition of done.
+- The contract checks completeness, not quality — a passing plan can still hold a bad specification. Say so when the content warrants it.
 
 ### Persistence
 
-**Engram only.** No mode selection. Auto-degrade gracefully when unavailable.
+**Artifacts live in the plan** (`.hefesto/<change>/plan.json`): the decision, the artifacts, their content, the scenarios and the verifications. Engram remains the project **memory** — discoveries, decisions, preferences — but it is no longer the artifact store. Observations saved under the old `sdd/{change}/*` topic keys stay as historical memory; new runs do not read them.
 
-Sub-agents follow ONE instruction: "Save artifact to engram."
+### Commands
 
-### Topic Keys
+- `/sdd-init` → bootstrap project context and skill registry (memory)
+- `/sdd-new` → classify, route, write the plan
+- `/sdd-ff` → loop through the planning artifacts
+- `/sdd-apply` → loop through implementation and verification
+- `/sdd-verify` → validate the plan and report
 
-`project-context`: `sdd-init/{project}` | Explore: `sdd/{change}/explore` | Proposal: `sdd/{change}/proposal` | Plan: `sdd/{change}/plan` | Spec: `sdd/{change}/spec` | Design: `sdd/{change}/design` | Tasks: `sdd/{change}/tasks` | Apply: `sdd/{change}/apply-progress` | Verify: `sdd/{change}/verify-report` | Archive: `sdd/{change}/archive-report` | DAG state: `sdd/{change}/state`
+`/route` and `/execute` are the runtime-agnostic names of the same flow.
 
-### Sub-Agent Context
+### Skills
 
-Sub-agents get fresh context. Orchestrator controls access.
-
-| Phase | Reads | Writes |
-|-------|-------|--------|
-| `sdd-init` | — | Project context |
-| `sdd-explore` | — | Explore |
-| `sdd-propose` | Explore (opt) | Proposal |
-| `sdd-plan` | Project context (opt) | Plan (explore+propose merged) |
-| `sdd-spec` | Proposal (req) | Spec |
-| `sdd-design` | Proposal (req) | Design |
-| `sdd-tasks` | Spec + Design | Tasks |
-| `sdd-apply` | Tasks + Spec + Design | Apply progress |
-| `sdd-verify` | Spec + Tasks | Verify report |
-| `sdd-archive` | All artifacts | Archive report |
-
-Retrieval: `mem_search` → `mem_get_observation` (full content).
-
-### Skill Resolution
-
-Orchestrator resolves skill paths ONCE per session:
-1. `mem_search(query: "skill-registry", project: "{project}")` → get registry
-2. Cache skill-name → path mapping
-3. Inject in sub-agent prompts: `SKILL: Load \`{path}\` before starting.`
-
-### Shared Conventions
-
-`~/.hefesto/skills/_shared/`: `persistence.md` (Engram-only + auto-degrade), `phase-common.md` (return envelope + skill loading)
+- `profile-route` — the routing rules (classify, never pick)
+- `profile-execute` — the loop rules (advance on recorded artifacts)
+- `sdd-*` phase skills remain as **reference for producing each artifact well** — what a proposal contains, what a good scenario looks like, the TDD cycle, the compliance matrix. The commands no longer chain them through Engram.
 
 <!-- hefesto:engram-protocol -->
 ## Engram Protocol
