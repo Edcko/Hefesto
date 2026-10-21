@@ -965,4 +965,5 @@ func init() {
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(routeCmd)
 	rootCmd.AddCommand(verifyPlanCmd)
+	rootCmd.AddCommand(nextCmd)
 }

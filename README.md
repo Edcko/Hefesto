@@ -36,9 +36,9 @@ That's it. You're running with 14 agents, 32 skills, persistent memory, a full S
 
 ## Features
 
-- **12 CLI Commands** — `install`, `status`, `update`, `uninstall`, `rollback`, `doctor`, `config`, `list`, `version`, `completion`, `route`, `verify-plan`
-- **32 AI Skills** — Angular, React, Next.js, TypeScript, Tailwind, Zod, Django, .NET, Playwright, Pytest, and more
-- **Methodology Router** — `hefesto route` computes the profile that fits a request; `hefesto verify-plan` checks the run against that profile's contract
+- **13 CLI Commands** — `install`, `status`, `update`, `uninstall`, `rollback`, `doctor`, `config`, `list`, `version`, `completion`, `route`, `verify-plan`, `next`
+- **33 AI Skills** — Angular, React, Next.js, TypeScript, Tailwind, Zod, Django, .NET, Playwright, Pytest, and more
+- **Methodology Router** — `hefesto route` computes the profile that fits a request; `hefesto next` says what the run owes next; `hefesto verify-plan` checks the run against that profile's contract
 - **10 SDD Phase Skills** — `init → explore → propose → spec → design → tasks → apply → verify → archive`
 - **14 Agents** — Primary mentor, orchestrator, SDD phase agents, remote execution
 - **Persistent Memory** — Engram integration for cross-session context that survives compactions
@@ -102,8 +102,9 @@ opencode                 # Start coding
 | `hefesto list themes` | List available themes | `--json` |
 | `hefesto list backups` | List timestamped backups | `--json` |
 | `hefesto version` | Print version information | — |
-| `hefesto route` | Decide the methodology profile for a request | `--type`, `--size`, `--risk`, `--change`, `--json` |
+| `hefesto route` | Decide the methodology profile for a request | `--type`, `--size`, `--risk`, `--change`, `--write-plan`, `--json` |
 | `hefesto verify-plan` | Validate a plan against the contract of its profile | `--json` |
+| `hefesto next` | Show the next action a run must take | `--plan`, `--json` |
 
 ### Command Details
 
@@ -147,6 +148,14 @@ Runs comprehensive checks on:
   outside the contract
 - Exits non-zero while the plan still owes work
 - Flags: `--json` (machine-readable report)
+
+**`hefesto next`**
+- Computes the next action of a run from the plan and the contract of its profile
+- Reports one of three phases: `produce` (the artifact does not exist yet),
+  `complete` (it exists but is missing content) or `close` (the contract is satisfied)
+- Prints the brief: what to read, what to write and what "done" means
+- The run advances on a recorded artifact, never on a promise
+- Flags: `--plan` (path to the plan document), `--json` (machine-readable step)
 
 ---
 
@@ -201,12 +210,14 @@ Hefesto deploys the following into `~/.config/opencode/`:
 ├── plugins/
 │   ├── engram.ts          # Persistent memory integration
 │   └── background-agents.ts  # Parallel agent execution
-├── commands/              # 5 SDD slash commands
+├── commands/              # 7 slash commands: SDD, routing and execution
 │   ├── sdd-init.md
 │   ├── sdd-new.md
 │   ├── sdd-ff.md
 │   ├── sdd-apply.md
-│   └── sdd-verify.md
+│   ├── sdd-verify.md
+│   ├── route.md
+│   └── execute.md
 ├── themes/
 │   └── hefesto.json       # Fuego/Forge theme (amber/copper)
 └── personality/

@@ -11,12 +11,13 @@ import (
 )
 
 var (
-	routeType    string
-	routeSize    string
-	routeRisk    string
-	routeChange  string
-	routeJSON    bool
-	verifyPlanJS bool
+	routeType      string
+	routeSize      string
+	routeRisk      string
+	routeChange    string
+	routeJSON      bool
+	routeWritePlan string
+	verifyPlanJS   bool
 )
 
 var routeCmd = &cobra.Command{
@@ -29,7 +30,8 @@ the run records itself in, and the plan the run starts from.
 The decision is computed, not improvised: the same inputs always produce the
 same profile, the same artifacts and the same verification tier.`,
 	Example: `  hefesto route --type known --size large --risk none --change add-widget
-  hefesto route --type ambiguous_behavior --size small --risk contract --json`,
+  hefesto route --type ambiguous_behavior --size small --risk contract --json
+  hefesto route --type known --size large --risk none --change add-widget --write-plan plan.json`,
 	RunE: runRoute,
 }
 
@@ -54,6 +56,7 @@ func init() {
 	routeCmd.Flags().StringVar(&routeRisk, "risk", string(router.RiskNone), "high-risk item touched: none, data, security, contract, concurrency, delivery, untestable")
 	routeCmd.Flags().StringVar(&routeChange, "change", "", "name of the change being routed")
 	routeCmd.Flags().BoolVar(&routeJSON, "json", false, "Output the routing payload in JSON format")
+	routeCmd.Flags().StringVar(&routeWritePlan, "write-plan", "", "write the plan template to this path")
 
 	verifyPlanCmd.Flags().BoolVar(&verifyPlanJS, "json", false, "Output the validation report in JSON format")
 }
@@ -88,11 +91,30 @@ func runRoute(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if routeWritePlan != "" {
+		if err := writePlanFile(routeWritePlan, payload.Plan); err != nil {
+			return err
+		}
+	}
+
 	if routeJSON {
 		return printRouteJSON(payload)
 	}
 
 	printRouteText(payload)
+	return nil
+}
+
+// writePlanFile writes a plan document to a path.
+func writePlanFile(path string, plan router.Plan) error {
+	data, err := json.MarshalIndent(plan, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal the plan: %w", err)
+	}
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		return fmt.Errorf("failed to write plan %s: %w", path, err)
+	}
+	fmt.Printf("  Plan written to %s\n", path)
 	return nil
 }
 

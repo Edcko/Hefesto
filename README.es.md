@@ -27,9 +27,9 @@ Sin configuraciones complejas. Sin copiar archivos manualmente. Solo instala y e
 
 ## Características
 
-- **12 Comandos CLI**: `install`, `status`, `update`, `uninstall`, `rollback`, `doctor`, `config`, `list`, `version`, `completion`, `route`, `verify-plan`
-- **32 Skills de IA**: Angular, React, Next.js, TypeScript, Tailwind, Zod, Django, .NET, Playwright, Pytest y más
-- **Router de Metodología**: `hefesto route` calcula el perfil que corresponde a cada solicitud; `hefesto verify-plan` revisa el trabajo contra el contrato de ese perfil
+- **13 Comandos CLI**: `install`, `status`, `update`, `uninstall`, `rollback`, `doctor`, `config`, `list`, `version`, `completion`, `route`, `verify-plan`, `next`
+- **33 Skills de IA**: Angular, React, Next.js, TypeScript, Tailwind, Zod, Django, .NET, Playwright, Pytest y más
+- **Router de Metodología**: `hefesto route` calcula el perfil que corresponde a cada solicitud; `hefesto next` indica qué falta ahora; `hefesto verify-plan` revisa el trabajo contra el contrato de ese perfil
 - **Flujo SDD de 6 Fases**: `init → plan → spec → tasks → apply → verify`
 - **14 Agentes**: Mentor principal, orquestador, fases SDD y ejecución remota
 - **Memoria Persistente**: Integración con Engram para contexto entre sesiones
@@ -81,8 +81,9 @@ opencode
 | `hefesto list themes` | Listar temas disponibles | `--json` |
 | `hefesto list backups` | Listar respaldos con timestamp | `--json` |
 | `hefesto version` | Imprimir información de versión | — |
-| `hefesto route` | Decidir el perfil de metodología de una solicitud | `--type`, `--size`, `--risk`, `--change`, `--json` |
+| `hefesto route` | Decidir el perfil de metodología de una solicitud | `--type`, `--size`, `--risk`, `--change`, `--write-plan`, `--json` |
 | `hefesto verify-plan` | Validar un plan contra el contrato de su perfil | `--json` |
+| `hefesto next` | Mostrar la siguiente acción que la corrida debe tomar | `--plan`, `--json` |
 | `hefesto version` | Imprimir información de versión | — |
 
 ### Detalles de Comandos
@@ -177,13 +178,14 @@ Hefesto despliega lo siguiente en `~/.config/opencode/`:
 ├── plugins/
 │   ├── engram.ts          # Integración de memoria persistente
 │   └── background-agents.ts  # Ejecución paralela de agentes
-├── commands/              # 6 slash commands de SDD y enrutado
+├── commands/              # 7 slash commands: SDD, enrutado y ejecución
 │   ├── sdd-init.md
 │   ├── sdd-new.md
 │   ├── sdd-ff.md
 │   ├── sdd-apply.md
 │   ├── sdd-verify.md
-│   └── route.md
+│   ├── route.md
+│   └── execute.md
 ├── themes/
 │   └── hefesto.json       # Tema Fuego/Forja (ámbar/cobre)
 └── personality/
@@ -228,6 +230,7 @@ Hefesto despliega lo siguiente en `~/.config/opencode/`:
 - **skill-creator** — Crear nuevos skills para agentes de IA siguiendo el spec Agent Skills
 - **skill-registry** — Crear o actualizar el registry de skills del proyecto
 - **profile-route** — Decide el perfil de metodología de una solicitud con `hefesto route` y cierra el trabajo con `hefesto verify-plan`
+- **profile-execute** — Conduce el cambio enrutado paso a paso: `hefesto next` dice qué falta, el artefacto se registra en el plan y `hefesto verify-plan` cierra la corrida
 - **stream-deck** — Crear slide decks de presentación para streams y cursos
 
 ### DevOps
@@ -265,6 +268,7 @@ init → plan → spec → tasks → apply → verify
 | `/sdd-apply <cambio>` | Implementar tareas |
 | `/sdd-verify <cambio>` | Validar implementación |
 | `/route <cambio>` | Enrutar el cambio a un perfil de metodología |
+| `/execute <cambio>` | Ejecutar el cambio enrutado siguiendo su contrato |
 
 ### Persistencia
 
