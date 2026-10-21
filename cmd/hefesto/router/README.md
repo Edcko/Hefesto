@@ -104,17 +104,22 @@ A decision is only half of the contract. The other half is what a run owes and
 what a run must show.
 
 **Artifacts.** Every artifact a profile can owe is cataloged: its name, its kind
-(`decision`, `document`, `test`, `probe`, `report`) and its purpose. A profile
-promises artifacts by name, and a name that is not in the catalog does not
-exist. That is what stops a profile from promising an artifact no phase
-produces.
+(`decision`, `document`, `test`, `probe`, `report`), its purpose and the
+content its contract requires. A profile promises artifacts by name, and a name
+that is not in the catalog does not exist. That is what stops a profile from
+promising an artifact no phase produces.
+
+Each artifact also declares how it is completed: the fields it must carry,
+whether it must state scenarios or tasks or verifications, and whether every
+task of the plan must be finished. The runner and the validator read the same
+declaration, so they cannot disagree about what "complete" means.
 
 **Profile contracts.** Each profile states its purpose, the entry criteria that
 justify it and the exit criteria that close it.
 
 **Plans.** A plan is what a run produces: the decision that opened it, the
-artifacts it created, the scenarios the specification states and the
-verifications that prove them.
+artifacts it created, the content each artifact carries, the scenarios the
+specification states and the verifications that prove them.
 
 **Validation.** `Validate` checks a plan against the contract its decision
 promised. Every rule is evaluated, and the report says which ones failed:
@@ -125,12 +130,19 @@ promised. Every rule is evaluated, and the report says which ones failed:
 | `decision-recorded` | A run that never wrote down its decision |
 | `artifact-known` | An artifact name that does not exist in the catalog |
 | `required-artifacts-present` | A promised artifact that was never produced |
+| `artifact-complete` | An artifact that exists but carries none of the content its contract requires |
 | `dependency-order` | An artifact that exists before what it depends on |
 | `scenario-coverage` | A scenario with no verification, or a verification of a scenario that does not exist |
 | `verification-gate` | A run that did not reach the verification tier the decision required |
 | `no-orphan-artifacts` | An artifact the decision did not ask for |
 
 The validator fails closed: an unknown input is a finding, never a guess.
+
+**Ordering.** `OrderArtifacts` returns the artifacts of a decision in the order
+they must be produced: an artifact never comes before the artifacts it depends
+on. It fails closed as well — an unknown artifact, a dependency the decision
+does not promise and a dependency cycle are all errors, because each of them
+means the contract and the plan disagree.
 
 ## Using it from a shell
 

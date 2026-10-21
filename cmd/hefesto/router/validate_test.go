@@ -5,6 +5,39 @@ import (
 	"testing"
 )
 
+// fillContract records the content every artifact of a plan owes, so the plan
+// satisfies the completion rules of its contract.
+func fillContract(plan *Plan) {
+	for i := range plan.Artifacts {
+		artifact := &plan.Artifacts[i]
+		spec, ok := Artifact(artifact.Name)
+		if !ok {
+			continue
+		}
+
+		artifact.Present = true
+
+		if len(spec.RequiredFields) > 0 {
+			artifact.Fields = make(map[string]string, len(spec.RequiredFields))
+			for _, field := range spec.RequiredFields {
+				artifact.Fields[field] = "recorded for " + artifact.Name
+			}
+		}
+
+		if spec.RequiresScenarios {
+			artifact.Scenarios = []Scenario{{ID: "S1", Title: "the behavior holds"}}
+		}
+		if spec.RequiresTasks {
+			artifact.Tasks = []Task{{ID: "1.1", Title: "do the work", Done: true}}
+		}
+		if spec.RequiresVerifications {
+			artifact.Verifications = []Verification{
+				{ID: "V1", Covers: []string{"S1"}, Command: "go test ./..."},
+			}
+		}
+	}
+}
+
 // completePlan returns a plan that satisfies every rule: every promised
 // artifact is present, one scenario is covered by one verification.
 func completePlan(t *testing.T) Plan {
@@ -16,9 +49,7 @@ func completePlan(t *testing.T) Plan {
 	}
 
 	plan := payload.Plan
-	for i := range plan.Artifacts {
-		plan.Artifacts[i].Present = true
-	}
+	fillContract(&plan)
 
 	spec, ok := plan.Artifact("spec")
 	if !ok {
@@ -315,6 +346,52 @@ func TestValidateReportsEveryProblemAtOnce(t *testing.T) {
 	}
 }
 
+func TestValidateReportsAnArtifactWithoutItsContent(t *testing.T) {
+	plan := completePlan(t)
+	setArtifact(&plan, "proposal", func(a *PlannedArtifact) { a.Fields = map[string]string{} })
+
+	report := Validate(plan)
+
+	if report.OK() {
+		t.Fatal("Validate() accepted an artifact that exists without its content")
+	}
+	if !hasProblem(report, CheckArtifactComplete) {
+		t.Errorf("problems = %+v, want a %q problem", report.Problems, CheckArtifactComplete)
+	}
+}
+
+func TestValidateReportsAnArtifactWhoseScenarioHasNoTitle(t *testing.T) {
+	plan := completePlan(t)
+	setArtifact(&plan, "spec", func(a *PlannedArtifact) {
+		a.Scenarios = []Scenario{{ID: "S1"}}
+	})
+
+	report := Validate(plan)
+
+	if report.OK() {
+		t.Fatal("Validate() accepted a scenario with no title")
+	}
+	if !hasProblem(report, CheckArtifactComplete) {
+		t.Errorf("problems = %+v, want a %q problem", report.Problems, CheckArtifactComplete)
+	}
+}
+
+func TestValidateReportsAnUnfinishedTask(t *testing.T) {
+	plan := completePlan(t)
+	setArtifact(&plan, "tasks", func(a *PlannedArtifact) {
+		a.Tasks = []Task{{ID: "1.1", Title: "do the work", Done: false}}
+	})
+
+	report := Validate(plan)
+
+	if report.OK() {
+		t.Fatal("Validate() accepted a run with an unfinished task")
+	}
+	if !hasProblem(report, CheckArtifactComplete) {
+		t.Errorf("problems = %+v, want a %q problem", report.Problems, CheckArtifactComplete)
+	}
+}
+
 func TestValidateChecksEveryRule(t *testing.T) {
 	report := Validate(completePlan(t))
 
@@ -323,6 +400,7 @@ func TestValidateChecksEveryRule(t *testing.T) {
 		CheckDecisionRecorded,
 		CheckArtifactKnown,
 		CheckRequiredPresent,
+		CheckArtifactComplete,
 		CheckDependencies,
 		CheckScenarioCoverage,
 		CheckVerificationGate,
