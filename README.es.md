@@ -153,8 +153,7 @@ Hefesto despliega lo siguiente en `~/.config/opencode/`:
 ~/.config/opencode/
 ├── AGENTS.md              # Persona Hefesto + orquestador SDD + protocolo Engram
 ├── opencode.json          # 4 definiciones de agentes con límites de pasos
-├── skills/                # 32 directorios de skills
-│   ├── _shared/           # Patrones comunes, convenciones de persistencia
+├── skills/                # 31 directorios de skills
 │   ├── ai-sdk-5/          # Patrones Vercel AI SDK 5
 │   ├── angular/           # Arquitectura Angular 20+
 │   ├── django-drf/        # Django REST Framework
@@ -237,7 +236,6 @@ Hefesto despliega lo siguiente en `~/.config/opencode/`:
 - **remote-exec** — Ejecutar comandos en servidores remotos vía SSH
 
 ### Compartidos
-- **_shared** — Patrones comunes de fases, convenciones de persistencia
 
 ---
 

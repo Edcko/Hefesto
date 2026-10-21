@@ -183,8 +183,7 @@ Hefesto deploys the following into `~/.config/opencode/`:
 ~/.config/opencode/
 ├── AGENTS.md              # Persona + SDD orchestrator + Engram protocol
 ├── opencode.json          # 14 agent definitions with step limits
-├── skills/                # 31 skill directories (30 + _shared)
-│   ├── _shared/           # Phase-common patterns, persistence conventions
+├── skills/                # 30 skill directories
 │   ├── ai-sdk-5/          # Vercel AI SDK 5 patterns
 │   ├── angular/           # Angular 20+ Scope Rule architecture
 │   ├── django-drf/        # Django REST Framework
@@ -274,7 +273,6 @@ Hefesto deploys the following into `~/.config/opencode/`:
 - **jira-task** — Jira task creation
 
 ### Shared
-- **_shared** — Phase-common patterns, persistence conventions
 
 ---
 

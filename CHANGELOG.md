@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Removed
 - The 10 `sdd-*` phase sub-agents from `opencode.json` — the commands drive the profile flow through `hefesto route/next/verify-plan`; the `sdd-*` phase skills remain as reference content
+- The `skills/_shared/` conventions and the persistence sections of the `sdd-*` phase skills — they taught the retired Engram-artifact-store doctrine; the skills remain as clean reference for producing each artifact
 - The GitHub Actions workflows (`test.yml`, `release.yml`) — they failed at the infrastructure level on every run; testing stays local (`make test`, `make lint`, `scripts/test.sh`) and releases are manual (`make release`, then update `Formula/hefesto.rb` by hand)
 
 ### Fixed

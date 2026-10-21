@@ -9,79 +9,24 @@ metadata:
   version: "2.0"
 ---
 
+> **Reference only.** The commands no longer launch this as a sub-agent. In the current flow, `hefesto route` decides the profile, `hefesto next` says when this artifact is due, and the plan (`.hefesto/<change>/plan.json`) records the result. This document is the craft guide for producing this artifact well.
+
 ## Purpose
 
-You are a sub-agent responsible for creating PROPOSALS. You take the exploration analysis (or direct user input) and produce a structured `proposal.md` document inside the change folder.
+Create PROPOSALS. Take the exploration analysis (or direct user input) and produce a structured proposal document: intent, scope, approach, affected areas, risks, rollback plan, and success criteria.
 
 ## What You Receive
 
-From the orchestrator:
 - Change name (e.g., "add-dark-mode")
-- Exploration analysis (from sdd-explore) OR direct user description
-- Artifact store mode (`engram | openspec | hybrid | none`)
+- Exploration analysis (from the exploration phase) OR direct user description
 
-## Execution and Persistence Contract
+## How to Create the Proposal
 
-Read and follow `skills/_shared/persistence-contract.md` for mode resolution rules.
+### Read Existing Specs
 
-- If mode is `engram`:
+If the plan already records specs for the affected domains, read them to understand current behavior this change might affect.
 
-  **Read dependencies** (two-step — search returns truncated previews):
-  1. `mem_search(query: "sdd/{change-name}/explore", project: "{project}")` → get observation ID (optional — may not exist)
-  2. If found: `mem_get_observation(id: {id})` → full exploration content
-  3. `mem_search(query: "sdd-init/{project}", project: "{project}")` → project context (optional)
-  4. If found: `mem_get_observation(id: {id})` → full project context
-
-  **Save your artifact**:
-  ```
-  mem_save(
-    title: "sdd/{change-name}/proposal",
-    topic_key: "sdd/{change-name}/proposal",
-    type: "architecture",
-    project: "{project}",
-    content: "{your full proposal markdown}"
-  )
-  ```
-  `topic_key` enables upserts — saving again updates, not duplicates.
-
-  (See `skills/_shared/engram-convention.md` for full naming conventions.)
-- If mode is `openspec`: Read and follow `skills/_shared/openspec-convention.md`.
-- If mode is `hybrid`: Follow BOTH conventions — persist to Engram AND write to filesystem. Retrieve dependencies from Engram (primary) with filesystem fallback.
-- If mode is `none`: Return result only. Never create or modify project files.
-- Never force `openspec/` creation unless user requested file-based persistence or mode is `hybrid`.
-
-## What to Do
-
-### Step 1: Load Skill Registry
-
-**Do this FIRST, before any other work.**
-
-1. Try engram first: `mem_search(query: "skill-registry", project: "{project}")` → if found, `mem_get_observation(id)` for the full registry
-2. If engram not available or not found: read `.atl/skill-registry.md` from the project root
-3. If neither exists: proceed without skills (not an error)
-
-From the registry, identify and read any skills whose triggers match your task. Also read any project convention files listed in the registry.
-
-### Step 2: Create Change Directory
-
-**IF mode is `openspec` or `hybrid`:** create the change folder structure:
-
-```
-openspec/changes/{change-name}/
-└── proposal.md
-```
-
-**IF mode is `engram` or `none`:** Do NOT create any `openspec/` directories. Skip this step.
-
-### Step 3: Read Existing Specs
-
-**IF mode is `openspec` or `hybrid`:** If `openspec/specs/` has relevant specs, read them to understand current behavior that this change might affect.
-
-**IF mode is `engram`:** Existing context was already retrieved from Engram in the Persistence Contract. Skip filesystem reads.
-
-**IF mode is `none`:** Skip — no existing specs to read.
-
-### Step 4: Write proposal.md
+### Write the Proposal
 
 ```markdown
 # Proposal: {Change Title}
@@ -133,36 +78,14 @@ Reference the recommended approach from exploration if available.}
 - [ ] {Measurable outcome}
 ```
 
-### Step 5: Persist Artifact
+Record the finished proposal in the plan of the change.
 
-**This step is MANDATORY — do NOT skip it.**
-
-If mode is `engram`:
-```
-mem_save(
-  title: "sdd/{change-name}/proposal",
-  topic_key: "sdd/{change-name}/proposal",
-  type: "architecture",
-  project: "{project}",
-  content: "{your full proposal markdown from Step 4}"
-)
-```
-
-If mode is `openspec` or `hybrid`: the file was already written in Step 4.
-
-If mode is `hybrid`: also call `mem_save` as above (write to BOTH backends).
-
-If you skip this step, the next phase (sdd-spec) will NOT be able to find your proposal and the pipeline BREAKS.
-
-### Step 6: Return Summary
-
-Return to the orchestrator:
+## Summary Format
 
 ```markdown
 ## Proposal Created
 
 **Change**: {change-name}
-**Location**: `openspec/changes/{change-name}/proposal.md` (openspec/hybrid) | Engram `sdd/{change-name}/proposal` (engram) | inline (none)
 
 ### Summary
 - **Intent**: {one-line summary}
@@ -171,16 +94,14 @@ Return to the orchestrator:
 - **Risk Level**: {Low/Medium/High}
 
 ### Next Step
-Ready for specs (sdd-spec) or design (sdd-design).
+Ready for specs or design.
 ```
 
 ## Rules
 
-- In `openspec` mode, ALWAYS create the `proposal.md` file
-- If the change directory already exists with a proposal, READ it first and UPDATE it
-- Keep the proposal CONCISE - it's a thinking tool, not a novel
+- If a proposal already exists for the change, READ it first and UPDATE it
+- Keep the proposal CONCISE — it's a thinking tool, not a novel
 - Every proposal MUST have a rollback plan
 - Every proposal MUST have success criteria
 - Use concrete file paths in "Affected Areas" when possible
-- Apply any `rules.proposal` from `openspec/config.yaml`
-- Return a structured envelope with: `status`, `executive_summary`, `detailed_report` (optional), `artifacts`, `next_recommended`, and `risks`
+- Record the proposal in the plan — the spec phase builds on it

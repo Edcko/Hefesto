@@ -9,87 +9,28 @@ metadata:
   version: "2.0"
 ---
 
+> **Reference only.** The commands no longer launch this as a sub-agent. In the current flow, `hefesto route` decides the profile, `hefesto next` says when this artifact is due, and the plan (`.hefesto/<change>/plan.json`) records the result. This document is the craft guide for producing this artifact well.
+
 ## Purpose
 
-You are a sub-agent responsible for creating the TASK BREAKDOWN. You take the proposal, specs, and design, then produce a `tasks.md` with concrete, actionable implementation steps organized by phase.
+Create the TASK BREAKDOWN. Take the proposal, specs, and design, then produce concrete, actionable implementation steps organized by phase. The plan of the change records the breakdown.
 
 ## What You Receive
 
-From the orchestrator:
 - Change name
-- Artifact store mode (`engram | openspec | hybrid | none`)
+- The proposal, specs, and design this breakdown implements
 
-## Execution and Persistence Contract
+## How to Write the Breakdown
 
-Read and follow `skills/_shared/persistence-contract.md` for mode resolution rules.
-
-- If mode is `engram`:
-
-  **CRITICAL: `mem_search` returns 300-char PREVIEWS, not full content. You MUST call `mem_get_observation(id)` for EVERY artifact. If you skip this, you will work with incomplete data and produce wrong tasks.**
-
-  **STEP A — SEARCH** (get IDs only — content is truncated):
-  1. `mem_search(query: "sdd/{change-name}/proposal", project: "{project}")` → save ID
-  2. `mem_search(query: "sdd/{change-name}/spec", project: "{project}")` → save ID
-  3. `mem_search(query: "sdd/{change-name}/design", project: "{project}")` → save ID
-
-  **STEP B — RETRIEVE FULL CONTENT** (mandatory for each):
-  4. `mem_get_observation(id: {proposal_id})` → full proposal (REQUIRED)
-  5. `mem_get_observation(id: {spec_id})` → full spec (REQUIRED)
-  6. `mem_get_observation(id: {design_id})` → full design (REQUIRED)
-
-  **DO NOT use search previews as source material.**
-
-  **Save your artifact**:
-  ```
-  mem_save(
-    title: "sdd/{change-name}/tasks",
-    topic_key: "sdd/{change-name}/tasks",
-    type: "architecture",
-    project: "{project}",
-    content: "{your full tasks markdown}"
-  )
-  ```
-  `topic_key` enables upserts — saving again updates, not duplicates.
-
-  (See `skills/_shared/engram-convention.md` for full naming conventions.)
-- If mode is `openspec`: Read and follow `skills/_shared/openspec-convention.md`.
-- If mode is `hybrid`: Follow BOTH conventions — persist to Engram AND write `tasks.md` to filesystem. Retrieve dependencies from Engram (primary) with filesystem fallback.
-- If mode is `none`: Return result only. Never create or modify project files.
-
-## What to Do
-
-### Step 1: Load Skill Registry
-
-**Do this FIRST, before any other work.**
-
-1. Try engram first: `mem_search(query: "skill-registry", project: "{project}")` → if found, `mem_get_observation(id)` for the full registry
-2. If engram not available or not found: read `.atl/skill-registry.md` from the project root
-3. If neither exists: proceed without skills (not an error)
-
-From the registry, identify and read any skills whose triggers match your task. Also read any project convention files listed in the registry.
-
-### Step 2: Analyze the Design
+### Analyze the Design
 
 From the design document, identify:
+
 - All files that need to be created/modified/deleted
 - The dependency order (what must come first)
 - Testing requirements per component
 
-### Step 3: Write tasks.md
-
-**IF mode is `openspec` or `hybrid`:** Create the task file:
-
-```
-openspec/changes/{change-name}/
-├── proposal.md
-├── specs/
-├── design.md
-└── tasks.md               ← You create this
-```
-
-**IF mode is `engram` or `none`:** Do NOT create any `openspec/` directories or files. Compose the tasks content in memory — you will persist it in Step 4.
-
-#### Task File Format
+### Task Breakdown Format
 
 ```markdown
 # Tasks: {Change Title}
@@ -153,36 +94,14 @@ Phase 5: Cleanup (if needed)
   └─ Documentation, remove dead code, polish
 ```
 
-### Step 4: Persist Artifact
+Record the finished breakdown in the plan of the change.
 
-**This step is MANDATORY — do NOT skip it.**
-
-If mode is `engram`:
-```
-mem_save(
-  title: "sdd/{change-name}/tasks",
-  topic_key: "sdd/{change-name}/tasks",
-  type: "architecture",
-  project: "{project}",
-  content: "{your full tasks markdown from Step 3}"
-)
-```
-
-If mode is `openspec` or `hybrid`: the file was already written in Step 3.
-
-If mode is `hybrid`: also call `mem_save` as above (write to BOTH backends).
-
-If you skip this step, the next phase (sdd-apply) will NOT be able to find your tasks and the pipeline BREAKS.
-
-### Step 5: Return Summary
-
-Return to the orchestrator:
+## Summary Format
 
 ```markdown
 ## Tasks Created
 
 **Change**: {change-name}
-**Location**: `openspec/changes/{change-name}/tasks.md` (openspec/hybrid) | Engram `sdd/{change-name}/tasks` (engram) | inline (none)
 
 ### Breakdown
 | Phase | Tasks | Focus |
@@ -196,7 +115,7 @@ Return to the orchestrator:
 {Brief description of the recommended order and why}
 
 ### Next Step
-Ready for implementation (sdd-apply).
+Ready for implementation.
 ```
 
 ## Rules
@@ -207,6 +126,5 @@ Ready for implementation (sdd-apply).
 - Each task should be completable in ONE session (if a task feels too big, split it)
 - Use hierarchical numbering: 1.1, 1.2, 2.1, 2.2, etc.
 - NEVER include vague tasks like "implement feature" or "add tests"
-- Apply any `rules.tasks` from `openspec/config.yaml`
 - If the project uses TDD, integrate test-first tasks: RED task (write failing test) → GREEN task (make it pass) → REFACTOR task (clean up)
-- Return a structured envelope with: `status`, `executive_summary`, `detailed_report` (optional), `artifacts`, `next_recommended`, and `risks`
+- Record the breakdown in the plan — implementation works from it
