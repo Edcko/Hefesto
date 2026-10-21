@@ -37,7 +37,7 @@ That's it. You're running with 14 agents, 32 skills, persistent memory, a full S
 ## Features
 
 - **13 CLI Commands** — `install`, `status`, `update`, `uninstall`, `rollback`, `doctor`, `config`, `list`, `version`, `completion`, `route`, `verify-plan`, `next`
-- **32 AI Skills** — Angular, React, Next.js, TypeScript, Tailwind, Zod, Django, .NET, Playwright, Pytest, and more
+- **33 AI Skills** — Angular, React, Next.js, TypeScript, Tailwind, Zod, Django, .NET, Playwright, Pytest, and more
 - **Methodology Router** — `hefesto route` computes the profile that fits a request; `hefesto next` says what the run owes next; `hefesto verify-plan` checks the run against that profile's contract
 - **10 SDD Phase Skills** — `init → explore → propose → spec → design → tasks → apply → verify → archive`
 - **14 Agents** — Primary mentor, orchestrator, SDD phase agents, remote execution
@@ -210,13 +210,14 @@ Hefesto deploys the following into `~/.config/opencode/`:
 ├── plugins/
 │   ├── engram.ts          # Persistent memory integration
 │   └── background-agents.ts  # Parallel agent execution
-├── commands/              # 6 slash commands: SDD and routing
+├── commands/              # 7 slash commands: SDD, routing and execution
 │   ├── sdd-init.md
 │   ├── sdd-new.md
 │   ├── sdd-ff.md
 │   ├── sdd-apply.md
 │   ├── sdd-verify.md
-│   └── route.md
+│   ├── route.md
+│   └── execute.md
 ├── themes/
 │   └── hefesto.json       # Fuego/Forge theme (amber/copper)
 └── personality/

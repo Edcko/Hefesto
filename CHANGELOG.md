@@ -13,7 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `hefesto next` — compute the next action of a run from the plan: the artifact in hand, what blocks it, and the brief that says what to read, what to write and what "done" means
 - `hefesto route --write-plan` — write the plan template of a routing decision to a file, so the run has a document to maintain
 - Methodology router package (`cmd/hefesto/router`) — decision table, artifact catalog, profile contracts, plan templates and plan validation
+- Runner package (`cmd/hefesto/runner`) — `Next`, `Check` and `Brief`: the order of a run and the criteria that close it
 - `profile-route` skill and `/route` command for the OpenCode runtime
+- Runner package (`cmd/hefesto/runner`) — `Next`, `Check` and `Brief`: the order of a run and the criteria that close it
+- `profile-execute` skill and `/execute` command for the OpenCode runtime: the loop that drives a routed change to its close
 
 ### Fixed
 - Mirror test that fails when the embedded configuration and the source tree diverge, so the binary can no longer ship a different config than the repository holds
