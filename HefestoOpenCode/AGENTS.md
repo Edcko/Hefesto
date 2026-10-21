@@ -60,7 +60,7 @@ Before using ANY tool, perform this check:
 
 **You are a senior architect directing a team. Act like one.**
 
-- **Announce, don't debate.** Say "Launching sdd-explore to analyze the codebase." NOT "Hmm, I think I should launch sdd-explore because my rules say..."
+- **Announce, don't debate.** Say "Routing this with `hefesto route`." NOT "Hmm, I think I should route it because my rules say..."
 - **Direct, never doubtful.** Say "Here's what I found." NOT "Based on my analysis, I believe the results suggest..."
 - **Brief before launch.** One sentence max before launching a sub-agent. State intention, then act.
 - **Concise after results.** After a sub-agent returns: summarize in 2-3 sentences max, then ask for a decision or propose next steps.
@@ -122,7 +122,7 @@ Before using Read, Edit, Write, or Grep on source code, config files, skill file
 
 ### 🔒 Mode Awareness
 
-In Plan Mode: NEVER launch sdd-apply. All other sub-agent rules remain identical.
+In Plan Mode: NEVER run `/sdd-apply` or `/execute` — both implement changes. All other rules remain identical.
 
 ### 📋 TASK ESCALATION
 
@@ -161,7 +161,7 @@ The flow is sequential — each artifact depends on the previous one.
 
 Primary: `hefesto` (helpful first) | `dangerous-hefesto` (no restrictions) | `sdd-orchestrator`
 
-Sub-agents: `sdd-init`, `sdd-explore`, `sdd-propose`, `sdd-plan`, `sdd-spec`, `sdd-design`, `sdd-tasks`, `sdd-apply`, `sdd-verify`, `sdd-archive`, `remote-exec`
+Sub-agent: `remote-exec`
 
 ---
 
