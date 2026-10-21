@@ -21,6 +21,16 @@ type Verification struct {
 	Independent bool `json:"independent"`
 }
 
+// Task is one implementation step of a task breakdown.
+type Task struct {
+	// ID identifies the task inside its plan.
+	ID string `json:"id"`
+	// Title states what the task does.
+	Title string `json:"title"`
+	// Done reports whether the task is finished.
+	Done bool `json:"done"`
+}
+
 // PlannedArtifact is one artifact in a plan and its current state.
 type PlannedArtifact struct {
 	// Name is the cataloged artifact this entry tracks.
@@ -29,8 +39,12 @@ type PlannedArtifact struct {
 	Present bool `json:"present"`
 	// DependsOn lists the artifacts that must exist first.
 	DependsOn []string `json:"depends_on"`
+	// Fields are the content the artifact's contract requires.
+	Fields map[string]string `json:"fields"`
 	// Scenarios are the testable behaviors this artifact states.
 	Scenarios []Scenario `json:"scenarios"`
+	// Tasks are the implementation steps this artifact tracks.
+	Tasks []Task `json:"tasks"`
 	// Verifications are the checks that prove the scenarios.
 	Verifications []Verification `json:"verifications"`
 }
@@ -63,6 +77,15 @@ func (p Plan) Scenarios() []Scenario {
 		scenarios = append(scenarios, artifact.Scenarios...)
 	}
 	return scenarios
+}
+
+// Tasks returns every task stated in the plan.
+func (p Plan) Tasks() []Task {
+	var tasks []Task
+	for _, artifact := range p.Artifacts {
+		tasks = append(tasks, artifact.Tasks...)
+	}
+	return tasks
 }
 
 // Verifications returns every verification recorded in the plan.

@@ -50,9 +50,8 @@ func TestRoutePlanStartsUnsatisfiedAndEndsSatisfied(t *testing.T) {
 	}
 
 	plan := payload.Plan
-	for i := range plan.Artifacts {
-		plan.Artifacts[i].Present = true
-	}
+	fillContract(&plan)
+
 	setArtifact(&plan, "spec", func(a *PlannedArtifact) {
 		a.Scenarios = []Scenario{{ID: "S1", Title: "the widget is created"}}
 	})

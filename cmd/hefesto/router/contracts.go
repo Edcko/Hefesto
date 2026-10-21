@@ -1,5 +1,7 @@
 package router
 
+import "fmt"
+
 // ArtifactKind classifies what an artifact is.
 type ArtifactKind string
 
@@ -24,6 +26,19 @@ type ArtifactSpec struct {
 	Kind ArtifactKind
 	// Purpose states why the artifact exists.
 	Purpose string
+	// RequiredFields are the content keys the artifact must carry to be
+	// complete.
+	RequiredFields []string
+	// RequiresScenarios reports whether the artifact must state scenarios.
+	RequiresScenarios bool
+	// RequiresTasks reports whether the artifact must list tasks.
+	RequiresTasks bool
+	// AllTasksDone reports whether every task of the plan must be finished
+	// for the artifact to be complete.
+	AllTasksDone bool
+	// RequiresVerifications reports whether the artifact must record
+	// verifications.
+	RequiresVerifications bool
 }
 
 // catalog holds every artifact name a decision or a plan may use. A name that
@@ -31,104 +46,125 @@ type ArtifactSpec struct {
 // artifact no phase produces.
 var catalog = map[string]ArtifactSpec{
 	"decision-record": {
-		Name:    "decision-record",
-		Kind:    ArtifactDecision,
-		Purpose: "Records the routing decision, its rationale and the risk item it named.",
+		Name:           "decision-record",
+		Kind:           ArtifactDecision,
+		Purpose:        "Records the routing decision, its rationale and the risk item it named.",
+		RequiredFields: []string{"profile", "rationale"},
 	},
 	"clarification-note": {
-		Name:    "clarification-note",
-		Kind:    ArtifactDocument,
-		Purpose: "The one focused question that resolved the ambiguous point.",
+		Name:           "clarification-note",
+		Kind:           ArtifactDocument,
+		Purpose:        "The one focused question that resolved the ambiguous point.",
+		RequiredFields: []string{"question", "answer"},
 	},
 	"one-red-test": {
-		Name:    "one-red-test",
-		Kind:    ArtifactTest,
-		Purpose: "A test written before the change, observed failing.",
+		Name:           "one-red-test",
+		Kind:           ArtifactTest,
+		Purpose:        "A test written before the change, observed failing.",
+		RequiredFields: []string{"path", "observation"},
 	},
 	"focused-test": {
-		Name:    "focused-test",
-		Kind:    ArtifactTest,
-		Purpose: "A test that proves the change behaves as intended.",
+		Name:           "focused-test",
+		Kind:           ArtifactTest,
+		Purpose:        "A test that proves the change behaves as intended.",
+		RequiredFields: []string{"path"},
 	},
 	"exploration-map": {
-		Name:    "exploration-map",
-		Kind:    ArtifactDocument,
-		Purpose: "A map of the affected area and its current behavior.",
+		Name:           "exploration-map",
+		Kind:           ArtifactDocument,
+		Purpose:        "A map of the affected area and its current behavior.",
+		RequiredFields: []string{"area", "current-behavior"},
 	},
 	"options-table": {
-		Name:    "options-table",
-		Kind:    ArtifactDocument,
-		Purpose: "The approaches considered, with their tradeoffs and effort.",
+		Name:           "options-table",
+		Kind:           ArtifactDocument,
+		Purpose:        "The approaches considered, with their tradeoffs and effort.",
+		RequiredFields: []string{"options", "recommended"},
 	},
 	"open-decisions": {
-		Name:    "open-decisions",
-		Kind:    ArtifactDocument,
-		Purpose: "The decisions that need the human before the work continues.",
+		Name:           "open-decisions",
+		Kind:           ArtifactDocument,
+		Purpose:        "The decisions that need the human before the work continues.",
+		RequiredFields: []string{"decisions"},
 	},
 	"prototype": {
-		Name:    "prototype",
-		Kind:    ArtifactDocument,
-		Purpose: "A throwaway artifact that tests the hypothesis.",
+		Name:           "prototype",
+		Kind:           ArtifactDocument,
+		Purpose:        "A throwaway artifact that tests the hypothesis.",
+		RequiredFields: []string{"hypothesis", "shape"},
 	},
 	"feedback-log": {
-		Name:    "feedback-log",
-		Kind:    ArtifactDocument,
-		Purpose: "The feedback the prototype produced.",
+		Name:           "feedback-log",
+		Kind:           ArtifactDocument,
+		Purpose:        "The feedback the prototype produced.",
+		RequiredFields: []string{"feedback", "source"},
 	},
 	"proposal": {
-		Name:    "proposal",
-		Kind:    ArtifactDocument,
-		Purpose: "Intent, scope, approach, risks and rollback plan for the change.",
+		Name:           "proposal",
+		Kind:           ArtifactDocument,
+		Purpose:        "Intent, scope, approach, risks and rollback plan for the change.",
+		RequiredFields: []string{"intent", "scope", "approach", "risks", "rollback"},
 	},
 	"spec": {
-		Name:    "spec",
-		Kind:    ArtifactDocument,
-		Purpose: "The requirements and their testable scenarios.",
+		Name:              "spec",
+		Kind:              ArtifactDocument,
+		Purpose:           "The requirements and their testable scenarios.",
+		RequiresScenarios: true,
 	},
 	"tasks": {
-		Name:    "tasks",
-		Kind:    ArtifactDocument,
-		Purpose: "The implementation breakdown derived from the specification.",
+		Name:          "tasks",
+		Kind:          ArtifactDocument,
+		Purpose:       "The implementation breakdown derived from the specification.",
+		RequiresTasks: true,
 	},
 	"verify-report": {
-		Name:    "verify-report",
-		Kind:    ArtifactReport,
-		Purpose: "The evidence that the implementation matches the specification.",
+		Name:                  "verify-report",
+		Kind:                  ArtifactReport,
+		Purpose:               "The evidence that the implementation matches the specification.",
+		RequiresVerifications: true,
+		AllTasksDone:          true,
 	},
 	"rollback-plan": {
-		Name:    "rollback-plan",
-		Kind:    ArtifactDocument,
-		Purpose: "How the change is reverted if it lands wrong.",
+		Name:           "rollback-plan",
+		Kind:           ArtifactDocument,
+		Purpose:        "How the change is reverted if it lands wrong.",
+		RequiredFields: []string{"steps", "trigger"},
 	},
 	"dry-run-probe": {
-		Name:    "dry-run-probe",
-		Kind:    ArtifactProbe,
-		Purpose: "Probe that shows an irreversible data effect before it happens.",
+		Name:           "dry-run-probe",
+		Kind:           ArtifactProbe,
+		Purpose:        "Probe that shows an irreversible data effect before it happens.",
+		RequiredFields: []string{"method", "observation"},
 	},
 	"permission-diff": {
-		Name:    "permission-diff",
-		Kind:    ArtifactProbe,
-		Purpose: "Probe that shows the permissions, guards and secrets a change touches.",
+		Name:           "permission-diff",
+		Kind:           ArtifactProbe,
+		Purpose:        "Probe that shows the permissions, guards and secrets a change touches.",
+		RequiredFields: []string{"method", "observation"},
 	},
 	"compat-matrix": {
-		Name:    "compat-matrix",
-		Kind:    ArtifactProbe,
-		Purpose: "Probe that shows the consumers of a contract a change alters.",
+		Name:           "compat-matrix",
+		Kind:           ArtifactProbe,
+		Purpose:        "Probe that shows the consumers of a contract a change alters.",
+		RequiredFields: []string{"method", "observation"},
 	},
 	"race-probe": {
-		Name:    "race-probe",
-		Kind:    ArtifactProbe,
-		Purpose: "Probe that exercises concurrent behavior.",
+		Name:           "race-probe",
+		Kind:           ArtifactProbe,
+		Purpose:        "Probe that exercises concurrent behavior.",
+		RequiredFields: []string{"method", "observation"},
 	},
 	"staged-install-probe": {
-		Name:    "staged-install-probe",
-		Kind:    ArtifactProbe,
-		Purpose: "Probe that exercises installers, release, CI and dependencies.",
+		Name:           "staged-install-probe",
+		Kind:           ArtifactProbe,
+		Purpose:        "Probe that exercises installers, release, CI and dependencies.",
+		RequiredFields: []string{"method", "observation"},
 	},
 	"manual-acceptance-probe": {
-		Name:    "manual-acceptance-probe",
-		Kind:    ArtifactProbe,
-		Purpose: "Manual check for a change no test would catch.",
+		Name:           "manual-acceptance-probe",
+		Kind:           ArtifactProbe,
+		Purpose:        "Manual check for a change no test would catch.",
+		RequiredFields: []string{"method", "observation"},
 	},
 }
 
@@ -266,6 +302,73 @@ func artifactsForProfile(req Request) []string {
 		return []string{"focused-test"}
 	}
 	return nil
+}
+
+// Dependencies returns the artifacts that must exist before the given one.
+func Dependencies(name string) []string {
+	dependencies := artifactDependencies[name]
+	out := make([]string, len(dependencies))
+	copy(out, dependencies)
+	return out
+}
+
+// OrderArtifacts returns the given artifacts in the order they must be
+// produced: an artifact never comes before the artifacts it depends on.
+//
+// It fails closed: an artifact the catalog does not know, a dependency the
+// decision does not promise, and a dependency cycle are all errors, because
+// each of them means the contract and the plan disagree.
+func OrderArtifacts(names []string) ([]string, error) {
+	return orderArtifacts(names, Dependencies)
+}
+
+// orderArtifacts sorts the artifacts with the given dependency lookup.
+func orderArtifacts(names []string, dependencies func(string) []string) ([]string, error) {
+	known := make(map[string]bool, len(names))
+	for _, name := range names {
+		if _, ok := Artifact(name); !ok {
+			return nil, fmt.Errorf("router: unknown artifact %q", name)
+		}
+		known[name] = true
+	}
+
+	for _, name := range names {
+		for _, dependency := range dependencies(name) {
+			if !known[dependency] {
+				return nil, fmt.Errorf("router: the contract requires %q, which the decision does not promise", dependency)
+			}
+		}
+	}
+
+	emitted := make(map[string]bool, len(names))
+	ordered := make([]string, 0, len(names))
+
+	for len(ordered) < len(names) {
+		progress := false
+		for _, name := range names {
+			if emitted[name] {
+				continue
+			}
+			ready := true
+			for _, dependency := range dependencies(name) {
+				if !emitted[dependency] {
+					ready = false
+					break
+				}
+			}
+			if !ready {
+				continue
+			}
+			emitted[name] = true
+			ordered = append(ordered, name)
+			progress = true
+		}
+		if !progress {
+			return nil, fmt.Errorf("router: the artifact dependencies form a cycle")
+		}
+	}
+
+	return ordered, nil
 }
 
 // sortStrings sorts a slice of strings in place.

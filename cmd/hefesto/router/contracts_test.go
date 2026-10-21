@@ -71,3 +71,77 @@ func TestArtifactNamesAreSorted(t *testing.T) {
 		t.Errorf("ArtifactNames() = %v, want it sorted", names)
 	}
 }
+
+func TestOrderArtifactsPutsDependenciesFirst(t *testing.T) {
+	ordered, err := OrderArtifacts([]string{"spec", "proposal", "tasks"})
+	if err != nil {
+		t.Fatalf("OrderArtifacts() error = %v", err)
+	}
+	if !slices.Equal(ordered, []string{"proposal", "spec", "tasks"}) {
+		t.Errorf("OrderArtifacts() = %v, want [proposal spec tasks]", ordered)
+	}
+}
+
+func TestOrderArtifactsRejectsAnUnknownArtifact(t *testing.T) {
+	if _, err := OrderArtifacts([]string{"invented"}); err == nil {
+		t.Fatal("OrderArtifacts() accepted an artifact the catalog does not know")
+	}
+}
+
+func TestOrderArtifactsRejectsADanglingDependency(t *testing.T) {
+	if _, err := OrderArtifacts([]string{"spec"}); err == nil {
+		t.Fatal("OrderArtifacts() accepted an artifact whose dependency the decision does not promise")
+	}
+}
+
+func TestOrderArtifactsRejectsACycle(t *testing.T) {
+	cyclic := func(name string) []string {
+		switch name {
+		case "proposal":
+			return []string{"spec"}
+		case "spec":
+			return []string{"proposal"}
+		default:
+			return nil
+		}
+	}
+
+	if _, err := orderArtifacts([]string{"proposal", "spec"}, cyclic); err == nil {
+		t.Fatal("orderArtifacts() accepted a dependency cycle")
+	}
+}
+
+func TestEveryDecisionCanBeOrdered(t *testing.T) {
+	types := []WorkType{WorkKnown, WorkAmbiguous, WorkUnknownDomain, WorkUnvalidatedIdea}
+	sizes := []Size{SizeSmall, SizeLarge}
+	risks := []RiskItem{RiskNone, RiskData, RiskSecurity, RiskContract, RiskConcurrency, RiskDelivery, RiskUntestable}
+
+	for _, workType := range types {
+		for _, size := range sizes {
+			for _, risk := range risks {
+				decision, err := Decide(Request{Type: workType, Size: size, Risk: risk})
+				if err != nil {
+					t.Fatalf("Decide() error = %v", err)
+				}
+				ordered, err := OrderArtifacts(decision.Artifacts)
+				if err != nil {
+					t.Errorf("OrderArtifacts(%v) error = %v", decision.Artifacts, err)
+					continue
+				}
+				if len(ordered) != len(decision.Artifacts) {
+					t.Errorf("OrderArtifacts() returned %d artifacts, want %d", len(ordered), len(decision.Artifacts))
+				}
+			}
+		}
+	}
+}
+
+func TestDependenciesAreCataloged(t *testing.T) {
+	for _, name := range ArtifactNames() {
+		for _, dependency := range Dependencies(name) {
+			if _, ok := Artifact(dependency); !ok {
+				t.Errorf("the artifact %q depends on %q, which the catalog does not know", name, dependency)
+			}
+		}
+	}
+}

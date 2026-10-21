@@ -41,8 +41,21 @@ func completePlan(t *testing.T) router.Plan {
 	plan := payload.Plan
 	for i := range plan.Artifacts {
 		plan.Artifacts[i].Present = true
-	}
-	for i := range plan.Artifacts {
+
+		spec, ok := router.Artifact(plan.Artifacts[i].Name)
+		if !ok {
+			continue
+		}
+		if len(spec.RequiredFields) > 0 {
+			plan.Artifacts[i].Fields = make(map[string]string, len(spec.RequiredFields))
+			for _, field := range spec.RequiredFields {
+				plan.Artifacts[i].Fields[field] = "recorded for " + plan.Artifacts[i].Name
+			}
+		}
+		if spec.RequiresTasks {
+			plan.Artifacts[i].Tasks = []router.Task{{ID: "1.1", Title: "do the work", Done: true}}
+		}
+
 		switch plan.Artifacts[i].Name {
 		case "spec":
 			plan.Artifacts[i].Scenarios = []router.Scenario{{ID: "S1", Title: "the widget is created"}}

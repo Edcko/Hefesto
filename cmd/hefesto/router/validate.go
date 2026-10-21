@@ -1,5 +1,7 @@
 package router
 
+import "strings"
+
 // Severity classifies how serious a finding is.
 type Severity string
 
@@ -70,6 +72,7 @@ const (
 	CheckDecisionRecorded = "decision-recorded"
 	CheckArtifactKnown    = "artifact-known"
 	CheckRequiredPresent  = "required-artifacts-present"
+	CheckArtifactComplete = "artifact-complete"
 	CheckDependencies     = "dependency-order"
 	CheckScenarioCoverage = "scenario-coverage"
 	CheckVerificationGate = "verification-gate"
@@ -88,6 +91,7 @@ func Validate(plan Plan) Report {
 	report.add(validateDecisionRecorded(plan))
 	report.add(validateArtifactKnown(plan))
 	report.add(validateRequiredPresent(plan))
+	report.add(validateArtifactComplete(plan))
 	report.add(validateDependencies(plan))
 	report.add(validateScenarioCoverage(plan))
 	report.add(validateVerificationGate(plan))
@@ -213,6 +217,105 @@ func validateRequiredPresent(plan Plan) (Check, []Problem) {
 		return fail(CheckRequiredPresent, "the plan still owes artifacts", problems...)
 	}
 	return pass(CheckRequiredPresent, "every promised artifact is present")
+}
+
+// validateArtifactComplete checks that the artifacts marked present actually
+// carry the content their contract requires. An artifact that exists but is
+// empty is not a delivered artifact.
+func validateArtifactComplete(plan Plan) (Check, []Problem) {
+	var problems []Problem
+
+	for _, name := range plan.Decision.Artifacts {
+		artifact, ok := plan.Artifact(name)
+		if !ok || !artifact.Present {
+			continue
+		}
+
+		spec, ok := Artifact(name)
+		if !ok {
+			continue
+		}
+
+		for _, field := range spec.RequiredFields {
+			if strings.TrimSpace(artifact.Fields[field]) == "" {
+				problems = append(problems, Problem{
+					Code:     CheckArtifactComplete,
+					Severity: SeverityError,
+					Artifact: name,
+					Detail:   "the required field " + field + " is empty",
+				})
+			}
+		}
+
+		if spec.RequiresScenarios {
+			if len(artifact.Scenarios) == 0 {
+				problems = append(problems, Problem{
+					Code:     CheckArtifactComplete,
+					Severity: SeverityError,
+					Artifact: name,
+					Detail:   "no scenario is recorded",
+				})
+			}
+			for _, scenario := range artifact.Scenarios {
+				if scenario.ID == "" || scenario.Title == "" {
+					problems = append(problems, Problem{
+						Code:     CheckArtifactComplete,
+						Severity: SeverityError,
+						Artifact: name,
+						Detail:   "a scenario has no id or no title",
+					})
+				}
+			}
+		}
+
+		if spec.RequiresTasks {
+			if len(artifact.Tasks) == 0 {
+				problems = append(problems, Problem{
+					Code:     CheckArtifactComplete,
+					Severity: SeverityError,
+					Artifact: name,
+					Detail:   "no task is recorded",
+				})
+			}
+			for _, task := range artifact.Tasks {
+				if task.ID == "" || task.Title == "" {
+					problems = append(problems, Problem{
+						Code:     CheckArtifactComplete,
+						Severity: SeverityError,
+						Artifact: name,
+						Detail:   "a task has no id or no title",
+					})
+				}
+			}
+		}
+
+		if spec.RequiresVerifications && len(artifact.Verifications) == 0 {
+			problems = append(problems, Problem{
+				Code:     CheckArtifactComplete,
+				Severity: SeverityError,
+				Artifact: name,
+				Detail:   "no verification is recorded",
+			})
+		}
+
+		if spec.AllTasksDone {
+			for _, task := range plan.Tasks() {
+				if !task.Done {
+					problems = append(problems, Problem{
+						Code:     CheckArtifactComplete,
+						Severity: SeverityError,
+						Artifact: name,
+						Detail:   "the task " + task.ID + " is not done",
+					})
+				}
+			}
+		}
+	}
+
+	if len(problems) > 0 {
+		return fail(CheckArtifactComplete, "some artifacts exist without their content", problems...)
+	}
+	return pass(CheckArtifactComplete, "every delivered artifact carries its content")
 }
 
 // validateDependencies checks that the artifacts a plan declares in order
