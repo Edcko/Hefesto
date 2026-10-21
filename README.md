@@ -389,8 +389,7 @@ Hefesto/
 ├── Formula/hefesto.rb         # Homebrew formula
 ├── install.sh                 # curl|bash installer
 ├── scripts/                   # Build, test, E2E scripts
-├── Makefile                   # Build automation
-└── .github/workflows/         # CI: test + release
+└── Makefile                   # Build automation (make release for manual releases)
 ```
 
 ---
