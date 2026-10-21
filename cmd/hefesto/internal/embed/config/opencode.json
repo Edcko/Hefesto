@@ -2,7 +2,7 @@
   "$schema": "https://opencode.ai/config.json",
   "agent": {
     "hefesto": {
-      "description": "Senior Architect mentor — helpful first, challenging when it matters",
+      "description": "Senior Architect mentor \u2014 helpful first, challenging when it matters",
       "mode": "primary",
       "prompt": "{file:~/.config/opencode/AGENTS.md}",
       "tools": {
@@ -11,7 +11,7 @@
       }
     },
     "dangerous-hefesto": {
-      "description": "Full permissions — no restrictions",
+      "description": "Full permissions \u2014 no restrictions",
       "mode": "all",
       "permission": {
         "bash": "allow",
@@ -32,7 +32,7 @@
         "webfetch": "allow",
         "websearch": "allow"
       },
-      "prompt": "You are a Senior Architect with 15+ years of experience, Google Developer Expert (GDE) and Microsoft MVP. Passionate teacher who genuinely wants people to learn and grow.\n\nCORE PRINCIPLE - READ THIS FIRST:\nBe helpful FIRST. You're a MENTOR, not an interrogator. Simple questions get simple answers. Save the tough love for moments that ACTUALLY matter - architecture decisions, bad practices, real misconceptions. Don't challenge every single message or demand clarification on simple requests.\n\nCRITICAL - BE A GOOD PERSON:\nYou are warm, genuine, and caring. Use casual expressions NATURALLY, like a friend who wants to help. NEVER be sarcastic, mocking, or condescending. NEVER use air quotes around what the user says. NEVER make them feel stupid. You're passionate because you CARE about their growth, not because you want to show off or put them down.\n\nPREFERRED CLI TOOLS:\nUse modern tools over legacy: bat (not cat), rg (not grep), fd (not find), sd (not sed), eza (not ls). Install via brew if missing.\n\nLANGUAGE RULES:\n\nSPANISH INPUT → Mexican Spanish, warm and natural:\n- 'Wey', 'güey', 'carnal', 'chido', 'padre', 'órale'\n- 'Qué onda', 'Qué pedo', 'Ya valiste', 'Ahí va'\n- 'Estás bien', 'Todo bien', 'No manches', 'Ni loco', 'A huevo'\n\nENGLISH INPUT → Same warm energy in English:\n- 'Here's the thing', 'And you know why?', 'I'm telling you right now'\n- 'It's that simple', 'Fantastic', 'Dude', 'Come on', 'Seriously?'\n\nTONE:\nPassionate and direct, but from a place of CARING. You get frustrated with shortcuts because you KNOW they can do better. Use rhetorical questions. Use CAPS for emphasis. But always be WARM - you're helping a friend grow, not lecturing a subordinate.\n\nBEING A COLLABORATIVE PARTNER:\n- Help first, add context after if needed\n- If something seems technically wrong, verify - but don't interrogate simple questions\n- Correct errors explaining the technical WHY\n- Propose alternatives with tradeoffs when relevant\n- You're a senior architect working WITH someone, not lecturing AT them",
+      "prompt": "You are a Senior Architect with 15+ years of experience, Google Developer Expert (GDE) and Microsoft MVP. Passionate teacher who genuinely wants people to learn and grow.\n\nCORE PRINCIPLE - READ THIS FIRST:\nBe helpful FIRST. You're a MENTOR, not an interrogator. Simple questions get simple answers. Save the tough love for moments that ACTUALLY matter - architecture decisions, bad practices, real misconceptions. Don't challenge every single message or demand clarification on simple requests.\n\nCRITICAL - BE A GOOD PERSON:\nYou are warm, genuine, and caring. Use casual expressions NATURALLY, like a friend who wants to help. NEVER be sarcastic, mocking, or condescending. NEVER use air quotes around what the user says. NEVER make them feel stupid. You're passionate because you CARE about their growth, not because you want to show off or put them down.\n\nPREFERRED CLI TOOLS:\nUse modern tools over legacy: bat (not cat), rg (not grep), fd (not find), sd (not sed), eza (not ls). Install via brew if missing.\n\nLANGUAGE RULES:\n\nSPANISH INPUT \u2192 Mexican Spanish, warm and natural:\n- 'Wey', 'g\u00fcey', 'carnal', 'chido', 'padre', '\u00f3rale'\n- 'Qu\u00e9 onda', 'Qu\u00e9 pedo', 'Ya valiste', 'Ah\u00ed va'\n- 'Est\u00e1s bien', 'Todo bien', 'No manches', 'Ni loco', 'A huevo'\n\nENGLISH INPUT \u2192 Same warm energy in English:\n- 'Here's the thing', 'And you know why?', 'I'm telling you right now'\n- 'It's that simple', 'Fantastic', 'Dude', 'Come on', 'Seriously?'\n\nTONE:\nPassionate and direct, but from a place of CARING. You get frustrated with shortcuts because you KNOW they can do better. Use rhetorical questions. Use CAPS for emphasis. But always be WARM - you're helping a friend grow, not lecturing a subordinate.\n\nBEING A COLLABORATIVE PARTNER:\n- Help first, add context after if needed\n- If something seems technically wrong, verify - but don't interrogate simple questions\n- Correct errors explaining the technical WHY\n- Propose alternatives with tradeoffs when relevant\n- You're a senior architect working WITH someone, not lecturing AT them",
       "tools": {
         "bash": true,
         "edit": true,
@@ -41,13 +41,12 @@
       }
     },
     "sdd-orchestrator": {
-      "description": "SDD coordinator — MUST ALWAYS delegate ALL work to sub-agents. NEVER reads source code, NEVER writes code, NEVER does analysis inline. Only coordinates, asks questions, and shows summaries.",
+      "description": "SDD coordinator \u2014 drives the methodology flow through hefesto route/next/verify-plan and /sdd-* commands. Only coordinates, asks questions, and shows summaries.",
       "mode": "all",
       "steps": 100,
       "permission": {
         "task": {
           "*": "deny",
-          "sdd-*": "allow",
           "remote-exec": "allow"
         }
       },
@@ -59,158 +58,8 @@
         "write": false
       }
     },
-    "sdd-init": {
-      "description": "Bootstrap SDD context and project configuration",
-      "hidden": true,
-      "mode": "subagent",
-      "steps": 20,
-      "prompt": "You are an SDD sub-agent for the init phase. Read your skill file at ~/.config/opencode/skills/sdd-init/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
-      "tools": {
-        "bash": true,
-        "edit": true,
-        "read": true,
-        "write": true
-      }
-    },
-    "sdd-plan": {
-      "description": "Explore codebase and create change proposals",
-      "hidden": true,
-      "mode": "subagent",
-      "steps": 40,
-      "prompt": "You are an SDD sub-agent for the plan phase (merged explore + propose). Read your skill file at ~/.config/opencode/skills/sdd-plan/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
-      "tools": {
-        "bash": true,
-        "edit": true,
-        "read": true,
-        "write": true
-      }
-    },
-    "sdd-spec": {
-      "description": "Write detailed specifications from proposals",
-      "hidden": true,
-      "mode": "subagent",
-      "steps": 40,
-      "prompt": "You are an SDD sub-agent for the spec phase. Read your skill file at ~/.config/opencode/skills/sdd-spec/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
-      "tools": {
-        "bash": true,
-        "edit": true,
-        "read": true,
-        "write": true
-      }
-    },
-    "sdd-tasks": {
-      "description": "Break down specs and designs into implementation tasks",
-      "hidden": true,
-      "mode": "subagent",
-      "steps": 35,
-      "prompt": "You are an SDD sub-agent for the tasks phase. Read your skill file at ~/.config/opencode/skills/sdd-tasks/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
-      "tools": {
-        "bash": true,
-        "edit": true,
-        "read": true,
-        "write": true
-      }
-    },
-    "sdd-apply": {
-      "description": "Implement code changes from task definitions",
-      "hidden": true,
-      "mode": "subagent",
-      "steps": 75,
-      "prompt": "You are an SDD sub-agent for the apply phase. Read your skill file at ~/.config/opencode/skills/sdd-apply/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
-      "tools": {
-        "bash": true,
-        "edit": true,
-        "read": true,
-        "write": true
-      }
-    },
-    "sdd-verify": {
-      "description": "Validate implementation against specs",
-      "hidden": true,
-      "mode": "subagent",
-      "steps": 30,
-      "prompt": "You are an SDD sub-agent for the verify phase. Read your skill file at ~/.config/opencode/skills/sdd-verify/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
-      "tools": {
-        "bash": true,
-        "edit": true,
-        "read": true,
-        "write": true
-      }
-    },
-    "sdd-explore": {
-      "description": "Investigate codebase and think through ideas",
-      "hidden": true,
-      "mode": "subagent",
-      "steps": 30,
-      "permission": {
-        "task": {
-          "*": "deny"
-        }
-      },
-      "prompt": "You are an SDD sub-agent for the explore phase. Read your skill file at ~/.config/opencode/skills/sdd-explore/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
-      "tools": {
-        "bash": true,
-        "edit": true,
-        "read": true,
-        "write": true
-      }
-    },
-    "sdd-propose": {
-      "description": "Create change proposals from explorations",
-      "hidden": true,
-      "mode": "subagent",
-      "steps": 35,
-      "permission": {
-        "task": {
-          "*": "deny"
-        }
-      },
-      "prompt": "You are an SDD sub-agent for the propose phase. Read your skill file at ~/.config/opencode/skills/sdd-propose/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
-      "tools": {
-        "bash": true,
-        "edit": true,
-        "read": true,
-        "write": true
-      }
-    },
-    "sdd-design": {
-      "description": "Create technical design from proposals",
-      "hidden": true,
-      "mode": "subagent",
-      "steps": 40,
-      "permission": {
-        "task": {
-          "*": "deny"
-        }
-      },
-      "prompt": "You are an SDD sub-agent for the design phase. Read your skill file at ~/.config/opencode/skills/sdd-design/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
-      "tools": {
-        "bash": true,
-        "edit": true,
-        "read": true,
-        "write": true
-      }
-    },
-    "sdd-archive": {
-      "description": "Archive completed change artifacts",
-      "hidden": true,
-      "mode": "subagent",
-      "steps": 25,
-      "permission": {
-        "task": {
-          "*": "deny"
-        }
-      },
-      "prompt": "You are an SDD sub-agent for the archive phase. Read your skill file at ~/.config/opencode/skills/sdd-archive/SKILL.md and follow its instructions. It includes a Step 1 for loading the skill registry — do NOT skip it.",
-      "tools": {
-        "bash": true,
-        "edit": true,
-        "read": true,
-        "write": true
-      }
-    },
     "remote-exec": {
-      "description": "Execute commands on remote servers via SSH — DevOps/infrastructure operations",
+      "description": "Execute commands on remote servers via SSH \u2014 DevOps/infrastructure operations",
       "hidden": true,
       "mode": "subagent",
       "prompt": "You are a DevOps sub-agent for remote server operations.\n\nSSH SAFETY RULES:\n1. ALWAYS verify the target host before executing destructive commands\n2. Use --dry-run when available for rsync operations\n3. NEVER expose credentials in command output\n4. Confirm before: rm -rf, database drops, service stops on production\n5. Prefer key-based auth over password\n6. Use timeout for long-running operations\n\nRead your skill file at ~/.config/opencode/skills/remote-exec/SKILL.md if it exists for additional instructions.",
@@ -229,7 +78,10 @@
       "url": "https://mcp.context7.com/mcp"
     },
     "engram": {
-      "command": ["engram", "mcp"],
+      "command": [
+        "engram",
+        "mcp"
+      ],
       "enabled": true,
       "type": "local"
     }
@@ -254,5 +106,7 @@
       "*.env.*": "deny"
     }
   },
-  "plugin": ["opencode-gemini-auth@latest"]
+  "plugin": [
+    "opencode-gemini-auth@latest"
+  ]
 }

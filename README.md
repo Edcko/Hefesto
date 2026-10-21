@@ -30,7 +30,7 @@ hefesto install
 opencode
 ```
 
-That's it. You're running with 14 agents, 32 skills, persistent memory, a full Spec-Driven Development workflow, and a router that computes the methodology profile for each request.
+That's it. You're running with 4 agents, 32 skills, persistent memory, a full Spec-Driven Development workflow, and a router that computes the methodology profile for each request.
 
 ---
 
@@ -40,7 +40,7 @@ That's it. You're running with 14 agents, 32 skills, persistent memory, a full S
 - **33 AI Skills** — Angular, React, Next.js, TypeScript, Tailwind, Zod, Django, .NET, Playwright, Pytest, and more
 - **Methodology Router** — `hefesto route` computes the profile that fits a request; `hefesto next` says what the run owes next; `hefesto verify-plan` checks the run against that profile's contract
 - **10 SDD Phase Skills** — `init → explore → propose → spec → design → tasks → apply → verify → archive`
-- **14 Agents** — Primary mentor, orchestrator, SDD phase agents, remote execution
+- **4 Agents** — Primary mentor, flow orchestrator, unrestricted mode, remote execution
 - **Persistent Memory** — Engram integration for cross-session context that survives compactions
 - **Background Agents Plugin** — Parallel task execution without blocking the main thread
 - **Interactive TUI Installer** — Progress tracking with Bubbletea, anvil banner, spinners
@@ -389,8 +389,7 @@ Hefesto/
 ├── Formula/hefesto.rb         # Homebrew formula
 ├── install.sh                 # curl|bash installer
 ├── scripts/                   # Build, test, E2E scripts
-├── Makefile                   # Build automation
-└── .github/workflows/         # CI: test + release
+└── Makefile                   # Build automation (make release for manual releases)
 ```
 
 ---

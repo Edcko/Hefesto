@@ -31,7 +31,7 @@ Sin configuraciones complejas. Sin copiar archivos manualmente. Solo instala y e
 - **33 Skills de IA**: Angular, React, Next.js, TypeScript, Tailwind, Zod, Django, .NET, Playwright, Pytest y más
 - **Router de Metodología**: `hefesto route` calcula el perfil que corresponde a cada solicitud; `hefesto next` indica qué falta ahora; `hefesto verify-plan` revisa el trabajo contra el contrato de ese perfil
 - **Flujo SDD de 6 Fases**: `init → plan → spec → tasks → apply → verify`
-- **14 Agentes**: Mentor principal, orquestador, fases SDD y ejecución remota
+- **4 Agentes**: Mentor principal, orquestador del flujo, modo sin restricciones y ejecución remota
 - **Memoria Persistente**: Integración con Engram para contexto entre sesiones (memoria; los artefactos del flujo viven en el plan de cada cambio)
 - **Plugin de Agentes en Segundo Plano**: Ejecución paralela de tareas sin bloquear
 - **Instalador TUI Interactivo**: Seguimiento de progreso con Bubbletea
@@ -152,7 +152,7 @@ Hefesto despliega lo siguiente en `~/.config/opencode/`:
 ```
 ~/.config/opencode/
 ├── AGENTS.md              # Persona Hefesto + orquestador SDD + protocolo Engram
-├── opencode.json          # 14 definiciones de agentes con límites de pasos
+├── opencode.json          # 4 definiciones de agentes con límites de pasos
 ├── skills/                # 32 directorios de skills
 │   ├── _shared/           # Patrones comunes, convenciones de persistencia
 │   ├── ai-sdk-5/          # Patrones Vercel AI SDK 5

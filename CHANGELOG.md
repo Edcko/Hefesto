@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `profile-execute` skill and `/execute` command for the OpenCode runtime: the loop that drives a routed change to its close
 - **SDD absorption** — the `/sdd-*` commands now drive the profile flow: artifacts live in the plan of each change (`.hefesto/<change>/plan.json`), Engram remains project memory, and the `sdd-*` phase skills stay as reference for producing each artifact well
 
+### Removed
+- The 10 `sdd-*` phase sub-agents from `opencode.json` — the commands drive the profile flow through `hefesto route/next/verify-plan`; the `sdd-*` phase skills remain as reference content
+- The GitHub Actions workflows (`test.yml`, `release.yml`) — they failed at the infrastructure level on every run; testing stays local (`make test`, `make lint`, `scripts/test.sh`) and releases are manual (`make release`, then update `Formula/hefesto.rb` by hand)
+
 ### Fixed
 - Mirror test that fails when the embedded configuration and the source tree diverge, so the binary can no longer ship a different config than the repository holds
 - README skill, agent and command counts
@@ -37,6 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `hefesto status --verbose` for detailed installation diagnostics
 - Comprehensive test suite — 128+ unit tests with E2E test script
 - README rewrite with updated documentation
+
+### Removed
+- The 10 `sdd-*` phase sub-agents from `opencode.json` — the commands drive the profile flow through `hefesto route/next/verify-plan`; the `sdd-*` phase skills remain as reference content
+- The GitHub Actions workflows (`test.yml`, `release.yml`) — they failed at the infrastructure level on every run; testing stays local (`make test`, `make lint`, `scripts/test.sh`) and releases are manual (`make release`, then update `Formula/hefesto.rb` by hand)
 
 ### Fixed
 - Connect CLI installer to real logic (was placeholder code)
@@ -58,6 +66,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Homebrew formula (`hefesto`) + CI/CD release pipeline
 - Docker testing environment
 - Initial Go unit tests
+
+### Removed
+- The 10 `sdd-*` phase sub-agents from `opencode.json` — the commands drive the profile flow through `hefesto route/next/verify-plan`; the `sdd-*` phase skills remain as reference content
+- The GitHub Actions workflows (`test.yml`, `release.yml`) — they failed at the infrastructure level on every run; testing stays local (`make test`, `make lint`, `scripts/test.sh`) and releases are manual (`make release`, then update `Formula/hefesto.rb` by hand)
 
 ### Fixed
 - Correct `opencode.json` format for compatibility with opencode v1.3.13
