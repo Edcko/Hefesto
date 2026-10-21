@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 - `hefesto route` — decide the methodology profile for a request from its dominant uncertainty, its size and the high-risk item it touches
 - `hefesto verify-plan` — validate a plan against the contract of the profile it was routed to, reporting every broken rule and exiting non-zero while work is outstanding
+- `hefesto next` — compute the next action of a run from the plan: the artifact in hand, what blocks it, and the brief that says what to read, what to write and what "done" means
+- `hefesto route --write-plan` — write the plan template of a routing decision to a file, so the run has a document to maintain
 - Methodology router package (`cmd/hefesto/router`) — decision table, artifact catalog, profile contracts, plan templates and plan validation
 - `profile-route` skill and `/route` command for the OpenCode runtime
 

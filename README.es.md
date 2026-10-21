@@ -27,9 +27,9 @@ Sin configuraciones complejas. Sin copiar archivos manualmente. Solo instala y e
 
 ## Características
 
-- **12 Comandos CLI**: `install`, `status`, `update`, `uninstall`, `rollback`, `doctor`, `config`, `list`, `version`, `completion`, `route`, `verify-plan`
+- **13 Comandos CLI**: `install`, `status`, `update`, `uninstall`, `rollback`, `doctor`, `config`, `list`, `version`, `completion`, `route`, `verify-plan`, `next`
 - **32 Skills de IA**: Angular, React, Next.js, TypeScript, Tailwind, Zod, Django, .NET, Playwright, Pytest y más
-- **Router de Metodología**: `hefesto route` calcula el perfil que corresponde a cada solicitud; `hefesto verify-plan` revisa el trabajo contra el contrato de ese perfil
+- **Router de Metodología**: `hefesto route` calcula el perfil que corresponde a cada solicitud; `hefesto next` indica qué falta ahora; `hefesto verify-plan` revisa el trabajo contra el contrato de ese perfil
 - **Flujo SDD de 6 Fases**: `init → plan → spec → tasks → apply → verify`
 - **14 Agentes**: Mentor principal, orquestador, fases SDD y ejecución remota
 - **Memoria Persistente**: Integración con Engram para contexto entre sesiones
@@ -81,8 +81,9 @@ opencode
 | `hefesto list themes` | Listar temas disponibles | `--json` |
 | `hefesto list backups` | Listar respaldos con timestamp | `--json` |
 | `hefesto version` | Imprimir información de versión | — |
-| `hefesto route` | Decidir el perfil de metodología de una solicitud | `--type`, `--size`, `--risk`, `--change`, `--json` |
+| `hefesto route` | Decidir el perfil de metodología de una solicitud | `--type`, `--size`, `--risk`, `--change`, `--write-plan`, `--json` |
 | `hefesto verify-plan` | Validar un plan contra el contrato de su perfil | `--json` |
+| `hefesto next` | Mostrar la siguiente acción que la corrida debe tomar | `--plan`, `--json` |
 | `hefesto version` | Imprimir información de versión | — |
 
 ### Detalles de Comandos
@@ -177,7 +178,7 @@ Hefesto despliega lo siguiente en `~/.config/opencode/`:
 ├── plugins/
 │   ├── engram.ts          # Integración de memoria persistente
 │   └── background-agents.ts  # Ejecución paralela de agentes
-├── commands/              # 6 slash commands de SDD y enrutado
+├── commands/              # 6 slash commands: SDD y enrutado
 │   ├── sdd-init.md
 │   ├── sdd-new.md
 │   ├── sdd-ff.md
