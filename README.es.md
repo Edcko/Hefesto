@@ -32,7 +32,7 @@ Sin configuraciones complejas. Sin copiar archivos manualmente. Solo instala y e
 - **Router de Metodología**: `hefesto route` calcula el perfil que corresponde a cada solicitud; `hefesto next` indica qué falta ahora; `hefesto verify-plan` revisa el trabajo contra el contrato de ese perfil
 - **Flujo SDD de 6 Fases**: `init → plan → spec → tasks → apply → verify`
 - **14 Agentes**: Mentor principal, orquestador, fases SDD y ejecución remota
-- **Memoria Persistente**: Integración con Engram para contexto entre sesiones
+- **Memoria Persistente**: Integración con Engram para contexto entre sesiones (memoria; los artefactos del flujo viven en el plan de cada cambio)
 - **Plugin de Agentes en Segundo Plano**: Ejecución paralela de tareas sin bloquear
 - **Instalador TUI Interactivo**: Seguimiento de progreso con Bubbletea
 - **Distribución vía Homebrew**: `brew install edcko/tap/hefesto`
@@ -262,17 +262,17 @@ init → plan → spec → tasks → apply → verify
 
 | Comando | Acción |
 |---------|--------|
-| `/sdd-init` | Inicializar SDD en tu proyecto |
-| `/sdd-new <cambio>` | Crear nuevo cambio (ejecuta la fase plan) |
-| `/sdd-ff <cambio>` | Avance rápido: plan → spec → tasks |
-| `/sdd-apply <cambio>` | Implementar tareas |
-| `/sdd-verify <cambio>` | Validar implementación |
-| `/route <cambio>` | Enrutar el cambio a un perfil de metodología |
-| `/execute <cambio>` | Ejecutar el cambio enrutado siguiendo su contrato |
+| `/sdd-init` | Preparar el contexto del proyecto y el registro de skills (memoria) |
+| `/sdd-new <cambio>` | Clasificar, enrutar y escribir el plan |
+| `/sdd-ff <cambio>` | Recorrer los artefactos de planeación |
+| `/sdd-apply <cambio>` | Recorrer implementación y verificación |
+| `/sdd-verify <cambio>` | Validar el plan y reportar |
+| `/route <cambio>` | El nombre agnóstico de `/sdd-new` |
+| `/execute <cambio>` | El nombre agnóstico de `/sdd-apply` |
 
 ### Persistencia
 
-**Solo Engram.** Sin selección de modo. Los artefactos se almacenan en memoria persistente y sobreviven sesiones y compactaciones.
+Los artefactos de un cambio viven en **su plan** (`.hefesto/<cambio>/plan.json`): la decisión, los artefactos, su contenido, los escenarios y las verificaciones. **Engram** sigue siendo la memoria del proyecto —descubrimientos, decisiones, preferencias— y los mantiene vivos entre sesiones y compactaciones. Las observaciones guardadas bajo las viejas claves `sdd/{cambio}/*` quedan como memoria histórica; las corridas nuevas no las leen.
 
 ---
 

@@ -296,15 +296,17 @@ Each phase reads from previous artifacts and writes its own. Phases are designed
 
 | Command | Action |
 |---------|--------|
-| `/sdd-init` | Bootstrap SDD in your project |
-| `/sdd-new <change>` | Create new change (runs explore → propose) |
-| `/sdd-ff <change>` | Fast-forward: propose → spec → tasks |
-| `/sdd-apply <change>` | Implement tasks in batches |
-| `/sdd-verify <change>` | Validate implementation against specs |
+| `/sdd-init` | Bootstrap project context and skill registry (memory) |
+| `/sdd-new <change>` | Classify, route, write the plan |
+| `/sdd-ff <change>` | Loop through the planning artifacts |
+| `/sdd-apply <change>` | Loop through implementation and verification |
+| `/sdd-verify <change>` | Validate the plan and report |
+| `/route <change>` | The runtime-agnostic name of `/sdd-new` |
+| `/execute <change>` | The runtime-agnostic name of `/sdd-apply` |
 
 ### Persistence
 
-All SDD artifacts are stored in **Engram** persistent memory. They survive session boundaries and context compactions — no lost work.
+The artifacts of a change live in **its plan** (`.hefesto/<change>/plan.json`): the decision, the artifacts, their content, the scenarios and the verifications. **Engram** remains the project memory — discoveries, decisions, preferences — and keeps them alive across sessions and compactions. Observations saved under the old `sdd/{change}/*` topic keys stay as historical memory; new runs do not read them.
 
 ---
 
@@ -323,7 +325,7 @@ All SDD artifacts are stored in **Engram** persistent memory. They survive sessi
 
 - **Single binary**: Everything embedded via `go:embed`. No external dependencies at runtime.
 - **Timestamped backups**: Every install/update creates a backup. `hefesto rollback` restores any previous state.
-- **Engram-first**: Persistent memory is the primary artifact store. No file-based mode selection.
+- **Plan-first artifacts, Engram memory**: The artifacts of a change live in its plan; Engram keeps the project's discoveries and decisions alive across sessions.
 - **Non-interactive mode**: All commands support `--yes` for CI/CD and scripting.
 
 ---

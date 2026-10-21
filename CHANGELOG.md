@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `profile-route` skill and `/route` command for the OpenCode runtime
 - Runner package (`cmd/hefesto/runner`) — `Next`, `Check` and `Brief`: the order of a run and the criteria that close it
 - `profile-execute` skill and `/execute` command for the OpenCode runtime: the loop that drives a routed change to its close
+- **SDD absorption** — the `/sdd-*` commands now drive the profile flow: artifacts live in the plan of each change (`.hefesto/<change>/plan.json`), Engram remains project memory, and the `sdd-*` phase skills stay as reference for producing each artifact well
 
 ### Fixed
 - Mirror test that fails when the embedded configuration and the source tree diverge, so the binary can no longer ship a different config than the repository holds
