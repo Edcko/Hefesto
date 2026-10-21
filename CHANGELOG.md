@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `hefesto route` — decide the methodology profile for a request from its dominant uncertainty, its size and the high-risk item it touches
+- `hefesto verify-plan` — validate a plan against the contract of the profile it was routed to, reporting every broken rule and exiting non-zero while work is outstanding
+- Methodology router package (`cmd/hefesto/router`) — decision table, artifact catalog, profile contracts, plan templates and plan validation
+- `profile-route` skill and `/route` command for the OpenCode runtime
+
+### Fixed
+- Mirror test that fails when the embedded configuration and the source tree diverge, so the binary can no longer ship a different config than the repository holds
+- README skill, agent and command counts
+
 ## [1.0.0] - 2026-04-11
 
 ### Added

@@ -963,4 +963,6 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(configCmd)
 	rootCmd.AddCommand(listCmd)
+	rootCmd.AddCommand(routeCmd)
+	rootCmd.AddCommand(verifyPlanCmd)
 }

@@ -27,10 +27,11 @@ Sin configuraciones complejas. Sin copiar archivos manualmente. Solo instala y e
 
 ## Características
 
-- **10 Comandos CLI**: `install`, `status`, `update`, `uninstall`, `rollback`, `doctor`, `config`, `list`, `version`, `completion`
-- **26 Skills de IA**: Angular, React, Next.js, TypeScript, Tailwind, Zod, Django, .NET, Playwright, Pytest y más
+- **12 Comandos CLI**: `install`, `status`, `update`, `uninstall`, `rollback`, `doctor`, `config`, `list`, `version`, `completion`, `route`, `verify-plan`
+- **32 Skills de IA**: Angular, React, Next.js, TypeScript, Tailwind, Zod, Django, .NET, Playwright, Pytest y más
+- **Router de Metodología**: `hefesto route` calcula el perfil que corresponde a cada solicitud; `hefesto verify-plan` revisa el trabajo contra el contrato de ese perfil
 - **Flujo SDD de 6 Fases**: `init → plan → spec → tasks → apply → verify`
-- **10 Agentes**: Mentor principal, orquestador, fases SDD y ejecución remota
+- **14 Agentes**: Mentor principal, orquestador, fases SDD y ejecución remota
 - **Memoria Persistente**: Integración con Engram para contexto entre sesiones
 - **Plugin de Agentes en Segundo Plano**: Ejecución paralela de tareas sin bloquear
 - **Instalador TUI Interactivo**: Seguimiento de progreso con Bubbletea
@@ -79,6 +80,9 @@ opencode
 | `hefesto list skills` | Listar todos los skills incluidos | `--json` |
 | `hefesto list themes` | Listar temas disponibles | `--json` |
 | `hefesto list backups` | Listar respaldos con timestamp | `--json` |
+| `hefesto version` | Imprimir información de versión | — |
+| `hefesto route` | Decidir el perfil de metodología de una solicitud | `--type`, `--size`, `--risk`, `--change`, `--json` |
+| `hefesto verify-plan` | Validar un plan contra el contrato de su perfil | `--json` |
 | `hefesto version` | Imprimir información de versión | — |
 
 ### Detalles de Comandos
@@ -147,17 +151,17 @@ Hefesto despliega lo siguiente en `~/.config/opencode/`:
 ```
 ~/.config/opencode/
 ├── AGENTS.md              # Persona Hefesto + orquestador SDD + protocolo Engram
-├── opencode.json          # 10 definiciones de agentes con límites de pasos
-├── skills/                # 26 directorios de skills
+├── opencode.json          # 14 definiciones de agentes con límites de pasos
+├── skills/                # 32 directorios de skills
 │   ├── _shared/           # Patrones comunes, convenciones de persistencia
 │   ├── ai-sdk-5/          # Patrones Vercel AI SDK 5
 │   ├── angular/           # Arquitectura Angular 20+
 │   ├── django-drf/        # Django REST Framework
 │   ├── dotnet/            # .NET 9 / ASP.NET Core
-│   ├── go-testing/        # Testing en Go + Bubbletea TUI
 │   ├── nextjs-15/         # Next.js 15 App Router
 │   ├── playwright/        # Testing E2E con Playwright
 │   ├── pr-review/         # Workflow de review de PRs en GitHub
+│   ├── profile-route/     # Router de metodología: decisión de perfil y validación del plan
 │   ├── pytest/            # Patrones de testing en Python
 │   ├── react-19/          # React 19 con Compiler
 │   ├── remote-exec/       # Ejecución remota vía SSH
@@ -173,12 +177,13 @@ Hefesto despliega lo siguiente en `~/.config/opencode/`:
 ├── plugins/
 │   ├── engram.ts          # Integración de memoria persistente
 │   └── background-agents.ts  # Ejecución paralela de agentes
-├── commands/              # 5 slash commands de SDD
+├── commands/              # 6 slash commands de SDD y enrutado
 │   ├── sdd-init.md
 │   ├── sdd-new.md
 │   ├── sdd-ff.md
 │   ├── sdd-apply.md
-│   └── sdd-verify.md
+│   ├── sdd-verify.md
+│   └── route.md
 ├── themes/
 │   └── hefesto.json       # Tema Fuego/Forja (ámbar/cobre)
 └── personality/
@@ -187,7 +192,7 @@ Hefesto despliega lo siguiente en `~/.config/opencode/`:
 
 ---
 
-## Skills (26 en Total)
+## Skills (32 en Total)
 
 ### Flujo SDD
 - **sdd-init** — Inicializa contexto SDD y configuración del proyecto
@@ -212,7 +217,6 @@ Hefesto despliega lo siguiente en `~/.config/opencode/`:
 ### Testing
 - **playwright** — Patrones de testing E2E con Playwright (Page Objects, selectores, workflow MCP)
 - **pytest** — Patrones de testing en Python con Pytest (fixtures, mocking, markers)
-- **go-testing** — Tests en Go y testing de TUI Bubbletea
 
 ### IA y SDK
 - **ai-sdk-5** — Patrones Vercel AI SDK 5 (cambios rompientes desde v4)
@@ -223,6 +227,7 @@ Hefesto despliega lo siguiente en `~/.config/opencode/`:
 - **technical-review** — Evaluación de ejercicios técnicos y entregas de candidatos
 - **skill-creator** — Crear nuevos skills para agentes de IA siguiendo el spec Agent Skills
 - **skill-registry** — Crear o actualizar el registry de skills del proyecto
+- **profile-route** — Decide el perfil de metodología de una solicitud con `hefesto route` y cierra el trabajo con `hefesto verify-plan`
 - **stream-deck** — Crear slide decks de presentación para streams y cursos
 
 ### DevOps
@@ -259,6 +264,7 @@ init → plan → spec → tasks → apply → verify
 | `/sdd-ff <cambio>` | Avance rápido: plan → spec → tasks |
 | `/sdd-apply <cambio>` | Implementar tareas |
 | `/sdd-verify <cambio>` | Validar implementación |
+| `/route <cambio>` | Enrutar el cambio a un perfil de metodología |
 
 ### Persistencia
 
@@ -327,6 +333,8 @@ Hefesto/
 │   └── personality/
 ├── cmd/hefesto/               # Binario instalador
 │   ├── main.go                # Entry point del CLI
+│   ├── route.go               # Comandos route + verify-plan
+│   ├── router/                # Router de metodología: tabla, contratos y validador de plan
 │   ├── internal/
 │   │   ├── install/           # Lógica de instalación
 │   │   ├── tui/               # TUI con Bubbletea
