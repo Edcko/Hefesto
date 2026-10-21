@@ -1,6 +1,6 @@
 ---
 agent: sdd-orchestrator
-description: Fast-forward — runs plan → spec → tasks sequentially (skip to implementation)
+description: Fast-forward a routed change through its planning artifacts
 ---
 
 ## Context
@@ -8,33 +8,28 @@ description: Fast-forward — runs plan → spec → tasks sequentially (skip to
 - **Change Name**: {args}
 - **Working Directory**: {cwd}
 - **Project**: {project}
-- **Persistence**: Engram only
+- **Plan**: `.hefesto/{args}/plan.json`
 
 ## Task
 
-Execute **plan → spec → tasks** in sequence for change `{args}`:
+Produce the planning artifacts of `{args}` and stop before implementation.
 
-### Phase 1: Plan
-1. Explore codebase and create change proposal
-2. Persist: `mem_save(topic_key: "sdd/{args}/plan", ...)`
+Run the loop until every planning artifact of the profile is complete:
 
-### Phase 2: Spec
-1. Read plan: `mem_search(query: "sdd/{args}/plan")` → `mem_get_observation(id)`
-2. Write detailed requirements and scenarios (Given/When/Then)
-3. Persist: `mem_save(topic_key: "sdd/{args}/spec", ...)`
+```bash
+hefesto next --plan .hefesto/{args}/plan.json --json
+```
 
-### Phase 3: Tasks
-1. Read spec: `mem_search(query: "sdd/{args}/spec")` → `mem_get_observation(id)`
-2. Break into implementation checklist (hierarchical: 1.1, 1.2)
-3. Persist: `mem_save(topic_key: "sdd/{args}/tasks", ...)`
+- **`produce`** — follow the brief, produce the artifact, record it in the
+  plan exactly as the brief lists it.
+- **`complete`** — the artifact exists but is missing content; fix the blockers.
+- **`close`** or an implementation artifact (a test, a task execution) — stop;
+  hand off to `/sdd-apply {args}`.
+
+The loop advances on a recorded artifact, never on a promise.
 
 ## Instructions
 
-- Load skills in order:
-  1. `~/.hefesto/skills/sdd-plan/SKILL.md`
-  2. `~/.hefesto/skills/sdd-spec/SKILL.md`
-  3. `~/.hefesto/skills/sdd-tasks/SKILL.md`
-- Load: `~/.hefesto/skills/_shared/phase-common.md` for return envelope
-- If any phase fails, STOP and report the issue
-- Return structured envelope with final status after all phases complete
-- `next_recommended`: `/sdd-apply {args}` to start implementation
+- Load skill: `~/.config/opencode/skills/profile-execute/SKILL.md`
+- Save discoveries and decisions to Engram as memory; artifacts go in the plan
+- `next_recommended`: `/sdd-apply {args}`

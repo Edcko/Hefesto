@@ -1,49 +1,38 @@
 ---
 agent: sdd-orchestrator
-description: Implement tasks from the change — write code following specs and design
+description: Implement and verify a routed change by following its contract
 ---
 
 ## Context
 
-- **Change Name**: {args} (if empty, use active change from recent apply-progress)
+- **Change Name**: {args}
 - **Working Directory**: {cwd}
 - **Project**: {project}
-- **Persistence**: Engram only
+- **Plan**: `.hefesto/{args}/plan.json`
 
 ## Task
 
-Implement tasks for change `{args}`:
+Drive `{args}` to its close.
 
-1. **Load Artifacts** (CRITICAL: use `mem_get_observation` for full content):
-   - `mem_search(query: "sdd/{args}/spec")` → get ID → `mem_get_observation(id)`
-   - `mem_search(query: "sdd/{args}/tasks")` → get ID → `mem_get_observation(id)`
-   - `mem_search(query: "sdd/{args}/design")` → optional, if exists
+Run the loop until the phase is `close`:
 
-2. **Load Skills**: 
-   - `mem_search(query: "skill-registry")` → get registry
-   - Load relevant coding skills for the stack
+```bash
+hefesto next --plan .hefesto/{args}/plan.json --json
+```
 
-3. **Implement Tasks**:
-   - Follow spec scenarios as acceptance criteria
-   - Match existing code patterns
-   - Detect TDD mode from project config or skills
-   - Mark completed tasks with `[x]`
+- **`produce`** — follow the brief. For implementation artifacts, detect TDD
+  mode and follow RED → GREEN → REFACTOR; record the test as the artifact
+  demands. For the verification artifact, run the real commands and record
+  the observed results.
+- **`complete`** — fix the blockers it reports, then record.
+- **`close`** — run `hefesto verify-plan .hefesto/{args}/plan.json`.
 
-4. **Persist Progress**:
-   ```
-   mem_update(id: {tasks-id}, content: "{updated tasks with [x]}")
-   mem_save(
-     title: "sdd/{args}/apply-progress",
-     topic_key: "sdd/{args}/apply-progress",
-     type: "architecture",
-     project: "{project}",
-     content: "{progress report}"
-   )
-   ```
+Do not report the change as done while `hefesto verify-plan` reports errors.
 
 ## Instructions
 
-- Load skill: `~/.hefesto/skills/sdd-apply/SKILL.md` for implementation workflow
-- Load: `~/.hefesto/skills/_shared/phase-common.md` for return envelope
-- Return: completed tasks, files changed, deviations, remaining tasks
-- `next_recommended`: `/sdd-verify {args}` when all tasks complete
+- Load skill: `~/.config/opencode/skills/profile-execute/SKILL.md`
+- Read the phase skills as reference when producing an artifact well:
+  `sdd-apply` for the TDD cycle, `sdd-verify` for the compliance matrix
+- The plan is the audit trail; an artifact nobody recorded does not exist
+- `next_recommended`: `/sdd-verify {args}`
