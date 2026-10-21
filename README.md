@@ -30,14 +30,15 @@ hefesto install
 opencode
 ```
 
-That's it. You're running with 14 agents, 31 skills, persistent memory, and a full Spec-Driven Development workflow.
+That's it. You're running with 14 agents, 32 skills, persistent memory, a full Spec-Driven Development workflow, and a router that computes the methodology profile for each request.
 
 ---
 
 ## Features
 
-- **10 CLI Commands** — `install`, `status`, `update`, `uninstall`, `rollback`, `doctor`, `config`, `list`, `version`, `completion`
-- **31 AI Skills** — Angular, React, Next.js, TypeScript, Tailwind, Zod, Django, .NET, Playwright, Pytest, and more
+- **12 CLI Commands** — `install`, `status`, `update`, `uninstall`, `rollback`, `doctor`, `config`, `list`, `version`, `completion`, `route`, `verify-plan`
+- **32 AI Skills** — Angular, React, Next.js, TypeScript, Tailwind, Zod, Django, .NET, Playwright, Pytest, and more
+- **Methodology Router** — `hefesto route` computes the profile that fits a request; `hefesto verify-plan` checks the run against that profile's contract
 - **10 SDD Phase Skills** — `init → explore → propose → spec → design → tasks → apply → verify → archive`
 - **14 Agents** — Primary mentor, orchestrator, SDD phase agents, remote execution
 - **Persistent Memory** — Engram integration for cross-session context that survives compactions
@@ -101,6 +102,8 @@ opencode                 # Start coding
 | `hefesto list themes` | List available themes | `--json` |
 | `hefesto list backups` | List timestamped backups | `--json` |
 | `hefesto version` | Print version information | — |
+| `hefesto route` | Decide the methodology profile for a request | `--type`, `--size`, `--risk`, `--change`, `--json` |
+| `hefesto verify-plan` | Validate a plan against the contract of its profile | `--json` |
 
 ### Command Details
 
@@ -126,6 +129,24 @@ Runs comprehensive checks on:
 - Lists available backups with timestamps
 - Creates safety backup before restoring
 - Flags: `--list` (show backups), `--yes` (restore most recent)
+
+**`hefesto route`**
+- Decides the methodology profile for a request from three facts: the dominant
+  uncertainty (`--type`), the size of the work (`--size`) and the high-risk item
+  the change touches (`--risk`)
+- Prints the decision, the contract of the chosen profile, the markdown scaffold
+  and the plan the run starts from
+- The profile is computed, never chosen by taste: the same inputs always
+  produce the same decision
+- Flags: `--change` (name of the change), `--json` (machine-readable payload)
+
+**`hefesto verify-plan`**
+- Validates a plan document against the contract of the profile it was routed to
+- Reports every rule the plan breaks: missing artifacts, broken ordering,
+  scenarios without verification, a missing independent verifier, artifacts
+  outside the contract
+- Exits non-zero while the plan still owes work
+- Flags: `--json` (machine-readable report)
 
 ---
 
@@ -339,13 +360,15 @@ Hefesto/
 ├── HefestoOpenCode/           # Source configuration (deployed to ~/.config/opencode/)
 │   ├── AGENTS.md              # Agent orchestrator rules
 │   ├── opencode.json          # Agent definitions
-│   ├── skills/                # 31 skill directories
+│   ├── skills/                # 32 skill directories
 │   ├── plugins/               # Engram + background-agents
-│   ├── commands/              # SDD slash commands
+│   ├── commands/              # SDD slash commands and /route
 │   ├── themes/                # Fuego/Forge theme
 │   └── personality/           # Hefesto persona
 ├── cmd/hefesto/               # Go installer binary
 │   ├── main.go                # CLI entry point (Cobra commands)
+│   ├── route.go               # route + verify-plan commands
+│   ├── router/                # Methodology router: decision table, contracts, plan validator
 │   └── internal/
 │       ├── install/           # Core install/backup/rollback/doctor logic
 │       ├── tui/               # Bubbletea TUI screens
