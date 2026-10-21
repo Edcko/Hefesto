@@ -9,81 +9,39 @@ metadata:
   version: "2.0"
 ---
 
+> **Reference only.** The commands no longer launch this as a sub-agent. In the current flow, `hefesto route` decides the profile, `hefesto next` says when this artifact is due, and the plan (`.hefesto/<change>/plan.json`) records the result. This document is the craft guide for producing this artifact well.
+
 ## Purpose
 
-You are a sub-agent responsible for VERIFICATION. You are the quality gate. Your job is to prove — with real execution evidence — that the implementation is complete, correct, and behaviorally compliant with the specs.
+VERIFICATION. You are the quality gate. Your job is to prove — with real execution evidence — that the implementation is complete, correct, and behaviorally compliant with the specs.
 
 Static analysis alone is NOT enough. You must execute the code.
 
 ## What You Receive
 
-From the orchestrator:
 - Change name
-- Artifact store mode (`engram | openspec | hybrid | none`)
+- The implementation to verify
 
-## Execution and Persistence Contract
+## How to Verify
 
-- If mode is `engram`:
-
-  **CRITICAL: `mem_search` returns 300-char PREVIEWS, not full content. You MUST call `mem_get_observation(id)` for EVERY artifact. If you skip this, you will verify against incomplete specs and miss issues.**
-
-  **STEP A — SEARCH** (get IDs only — content is truncated):
-  1. `mem_search(query: "sdd/{change-name}/proposal", project: "{project}")` → save ID
-  2. `mem_search(query: "sdd/{change-name}/spec", project: "{project}")` → save ID
-  3. `mem_search(query: "sdd/{change-name}/design", project: "{project}")` → save ID
-  4. `mem_search(query: "sdd/{change-name}/tasks", project: "{project}")` → save ID
-
-  **STEP B — RETRIEVE FULL CONTENT** (mandatory for each):
-  5. `mem_get_observation(id: {proposal_id})` → full proposal
-  6. `mem_get_observation(id: {spec_id})` → full spec (REQUIRED for compliance matrix)
-  7. `mem_get_observation(id: {design_id})` → full design
-  8. `mem_get_observation(id: {tasks_id})` → full tasks
-
-  **DO NOT use search previews as source material.**
-
-  **Save your artifact**:
-  ```
-  mem_save(
-    title: "sdd/{change-name}/verify-report",
-    topic_key: "sdd/{change-name}/verify-report",
-    type: "architecture",
-    project: "{project}",
-    content: "{your full verification report markdown}"
-  )
-  ```
-  `topic_key` enables upserts — saving again updates, not duplicates. (Read `skills/_shared/sdd-phase-common.md`.)
-
-  (See `skills/_shared/engram-convention.md` for full naming conventions.)
-- If mode is `openspec`: Read and follow `skills/_shared/openspec-convention.md`. Save to `openspec/changes/{change-name}/verify-report.md`.
-- If mode is `hybrid`: Follow BOTH conventions — persist to Engram AND write `verify-report.md` to filesystem.
-- If mode is `none`: Return the verification report inline only. Never write files.
-
-## What to Do
-
-### Step 1: Load Skills
-
-The orchestrator provides your skill path in the launch prompt. Load it now. If no path was provided, proceed without additional skills.
-
-> Read `skills/_shared/sdd-phase-common.md` for the engram upsert note and return envelope format.
-
-### Step 2: Check Completeness
+### Step 1: Check Completeness
 
 Verify ALL tasks are done:
 
 ```
-Read tasks.md
+Read the task breakdown recorded in the plan
 ├── Count total tasks
 ├── Count completed tasks [x]
 ├── List incomplete tasks [ ]
 └── Flag: CRITICAL if core tasks incomplete, WARNING if cleanup tasks incomplete
 ```
 
-### Step 3: Check Correctness (Static Specs Match)
+### Step 2: Check Correctness (Static Specs Match)
 
 For EACH spec requirement and scenario, search the codebase for structural evidence:
 
 ```
-FOR EACH REQUIREMENT in specs/:
+FOR EACH REQUIREMENT in specs:
 ├── Search codebase for implementation evidence
 ├── For each SCENARIO:
 │   ├── Is the GIVEN precondition handled in code?
@@ -93,21 +51,21 @@ FOR EACH REQUIREMENT in specs/:
 └── Flag: CRITICAL if requirement missing, WARNING if scenario partially covered
 ```
 
-Note: This is static analysis only. Behavioral validation with real execution happens in Step 6.
+Note: This is static analysis only. Behavioral validation with real execution happens in Step 5.
 
-### Step 4: Check Coherence (Design Match)
+### Step 3: Check Coherence (Design Match)
 
 Verify design decisions were followed:
 
 ```
-FOR EACH DECISION in design.md:
+FOR EACH DECISION in the design:
 ├── Was the chosen approach actually used?
 ├── Were rejected alternatives accidentally implemented?
 ├── Do file changes match the "File Changes" table?
 └── Flag: WARNING if deviation found (may be valid improvement)
 ```
 
-### Step 5: Check Testing (Static)
+### Step 4: Check Testing (Static)
 
 Verify test files exist and cover the right scenarios:
 
@@ -120,17 +78,17 @@ Search for test files related to the change
 └── Flag: WARNING if scenarios lack tests, SUGGESTION if coverage could improve
 ```
 
-### Step 5b: Run Tests (Real Execution)
+### Step 5: Run Tests (Real Execution)
 
 Detect the project's test runner and execute the tests:
 
 ```
 Detect test runner from:
-├── openspec/config.yaml → rules.verify.test_command (highest priority)
+├── Project configuration (test command, if configured — highest priority)
 ├── package.json → scripts.test
 ├── pyproject.toml / pytest.ini → pytest
 ├── Makefile → make test
-└── Fallback: ask orchestrator
+└── Fallback: report that tests couldn't be run automatically
 
 Execute: {test_command}
 Capture:
@@ -144,13 +102,13 @@ Flag: CRITICAL if exit code != 0 (any test failed)
 Flag: WARNING if skipped tests relate to changed areas
 ```
 
-### Step 5c: Build & Type Check (Real Execution)
+### Step 6: Build & Type Check (Real Execution)
 
 Detect and run the build/type-check command:
 
 ```
 Detect build command from:
-├── openspec/config.yaml → rules.verify.build_command (highest priority)
+├── Project configuration (build command, if configured — highest priority)
 ├── package.json → scripts.build → also run tsc --noEmit if tsconfig.json exists
 ├── pyproject.toml → python -m build or equivalent
 ├── Makefile → make build
@@ -166,33 +124,33 @@ Flag: CRITICAL if build fails (exit code != 0)
 Flag: WARNING if there are type errors even with passing build
 ```
 
-### Step 5d: Coverage Validation (Real Execution — if threshold configured)
+### Step 7: Coverage Validation (Real Execution — if a threshold is configured)
 
-Run with coverage only if `rules.verify.coverage_threshold` is set in `openspec/config.yaml`:
+Run with coverage only if the project has a coverage threshold configured:
 
 ```
-IF coverage_threshold is configured:
+Coverage threshold configured:
 ├── Run: {test_command} --coverage (or equivalent for the test runner)
 ├── Parse coverage report
 ├── Compare total coverage % against threshold
 ├── Flag: WARNING if below threshold (not CRITICAL — coverage alone doesn't block)
 └── Report per-file coverage for changed files only
 
-IF coverage_threshold is NOT configured:
+No coverage threshold configured:
 └── Skip this step, report as "Not configured"
 ```
 
-### Step 6: Spec Compliance Matrix (Behavioral Validation)
+### Step 8: Spec Compliance Matrix (Behavioral Validation)
 
-This is the most important step. Cross-reference EVERY spec scenario against the actual test run results from Step 5b to build behavioral evidence.
+This is the most important step. Cross-reference EVERY spec scenario against the actual test run results from Step 5 to build behavioral evidence.
 
 For each scenario from the specs, find which test(s) cover it and what the result was:
 
 ```
-FOR EACH REQUIREMENT in specs/:
+FOR EACH REQUIREMENT in specs:
   FOR EACH SCENARIO:
   ├── Find tests that cover this scenario (by name, description, or file path)
-  ├── Look up that test's result from Step 5b output
+  ├── Look up that test's result from Step 5 output
   ├── Assign compliance status:
   │   ├── ✅ COMPLIANT   → test exists AND passed
   │   ├── ❌ FAILING     → test exists BUT failed (CRITICAL)
@@ -203,17 +161,9 @@ FOR EACH REQUIREMENT in specs/:
 
 A spec scenario is only considered COMPLIANT when there is a test that passed proving the behavior at runtime. Code existing in the codebase is NOT sufficient evidence.
 
-### Step 7: Persist Verification Report
+### Step 9: Return Summary
 
-Persist the report according to the resolved `artifact_store.mode`, following the conventions in `skills/_shared/`:
-
-- **engram**: Use `engram-convention.md` — artifact type `verify-report`
-- **openspec**: Write to `openspec/changes/{change-name}/verify-report.md`
-- **none**: Return the full report inline, do NOT write any files
-
-### Step 8: Return Summary
-
-Return to the orchestrator the same content you wrote to `verify-report.md`:
+Produce the verification report in this format and record it in the plan of the change:
 
 ```markdown
 ## Verification Report
@@ -309,7 +259,5 @@ Return to the orchestrator the same content you wrote to `verify-report.md`:
 - CRITICAL issues = must fix before archive
 - WARNINGS = should fix but won't block
 - SUGGESTIONS = improvements, not blockers
-- DO NOT fix any issues — only report them. The orchestrator decides what to do.
-- In `openspec` mode, ALWAYS save the report to `openspec/changes/{change-name}/verify-report.md` — this persists the verification for sdd-archive and the audit trail
-- Apply any `rules.verify` from `openspec/config.yaml`
-- Return a structured envelope with: `status`, `executive_summary`, `detailed_report` (optional), `artifacts`, `next_recommended`, and `risks` (read `skills/_shared/sdd-phase-common.md` for the full envelope spec)
+- DO NOT fix any issues — only report them. The run decides what to do.
+- Record the report in the plan — it persists the verification for the archive step and the audit trail

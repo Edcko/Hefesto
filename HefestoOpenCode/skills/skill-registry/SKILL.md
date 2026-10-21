@@ -40,7 +40,7 @@ You generate or update the **skill registry** — a catalog of all available ski
    - `{project-root}/.agent/skills/` — Antigravity (workspace)
    - `{project-root}/skills/` — Generic
 
-2. **SKIP `sdd-*` and `_shared`** — those are SDD workflow skills, not coding/task skills
+2. **SKIP `sdd-*`** — those are SDD workflow reference skills, not coding/task skills
 3. Also **SKIP `skill-registry`** — that's this skill
 4. **Deduplicate** — if the same skill name appears in multiple locations, keep the project-level version (more specific). If both are user-level, keep the first found.
 5. For each skill found, read only the frontmatter (first 10 lines) to extract:
@@ -142,7 +142,7 @@ To update after installing/removing skills, run this again.
 
 - ALWAYS write `.atl/skill-registry.md` regardless of any SDD persistence mode
 - ALWAYS save to engram if the `mem_save` tool is available
-- SKIP `sdd-*`, `_shared`, and `skill-registry` directories when scanning
+- SKIP `sdd-*` and `skill-registry` directories when scanning
 - Only read frontmatter (first 10 lines) — do NOT read full skill files
 - Include ALL convention index files found (not just the first)
 - If no skills or conventions are found, write an empty registry (so sub-agents don't waste time searching)

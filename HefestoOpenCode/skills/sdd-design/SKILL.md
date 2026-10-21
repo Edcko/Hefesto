@@ -9,85 +9,29 @@ metadata:
   version: "2.0"
 ---
 
+> **Reference only.** The commands no longer launch this as a sub-agent. In the current flow, `hefesto route` decides the profile, `hefesto next` says when this artifact is due, and the plan (`.hefesto/<change>/plan.json`) records the result. This document is the craft guide for producing this artifact well.
+
 ## Purpose
 
-You are a sub-agent responsible for TECHNICAL DESIGN. You take the proposal and specs, then produce a `design.md` that captures HOW the change will be implemented — architecture decisions, data flow, file changes, and technical rationale.
+TECHNICAL DESIGN. Take the proposal and specs, then produce a design document that captures HOW the change will be implemented — architecture decisions, data flow, file changes, and technical rationale.
 
 ## What You Receive
 
-From the orchestrator:
 - Change name
-- Artifact store mode (`engram | openspec | hybrid | none`)
+- The proposal and specs this design implements
 
-## Execution and Persistence Contract
+## How to Write the Design
 
-Read and follow `skills/_shared/persistence-contract.md` for mode resolution rules.
-
-- If mode is `engram`:
-
-  **CRITICAL: `mem_search` returns 300-char PREVIEWS, not full content. You MUST call `mem_get_observation(id)` for EVERY artifact. If you skip this, you will work with incomplete data and produce wrong design.**
-
-  **STEP A — SEARCH** (get IDs only — content is truncated):
-  1. `mem_search(query: "sdd/{change-name}/proposal", project: "{project}")` → save ID
-  2. `mem_search(query: "sdd/{change-name}/spec", project: "{project}")` → save ID (optional — may not exist if running in parallel with sdd-spec)
-
-  **STEP B — RETRIEVE FULL CONTENT** (mandatory for each found):
-  3. `mem_get_observation(id: {proposal_id})` → full proposal content (REQUIRED)
-  4. If spec found: `mem_get_observation(id: {spec_id})` → full spec content
-
-  **DO NOT use search previews as source material.**
-
-  **Save your artifact**:
-  ```
-  mem_save(
-    title: "sdd/{change-name}/design",
-    topic_key: "sdd/{change-name}/design",
-    type: "architecture",
-    project: "{project}",
-    content: "{your full design markdown}"
-  )
-  ```
-  `topic_key` enables upserts — saving again updates, not duplicates.
-
-  (See `skills/_shared/engram-convention.md` for full naming conventions.)
-- If mode is `openspec`: Read and follow `skills/_shared/openspec-convention.md`.
-- If mode is `hybrid`: Follow BOTH conventions — persist to Engram AND write `design.md` to filesystem. Retrieve dependencies from Engram (primary) with filesystem fallback.
-- If mode is `none`: Return result only. Never create or modify project files.
-
-## What to Do
-
-### Step 1: Load Skill Registry
-
-**Do this FIRST, before any other work.**
-
-1. Try engram first: `mem_search(query: "skill-registry", project: "{project}")` → if found, `mem_get_observation(id)` for the full registry
-2. If engram not available or not found: read `.atl/skill-registry.md` from the project root
-3. If neither exists: proceed without skills (not an error)
-
-From the registry, identify and read any skills whose triggers match your task. Also read any project convention files listed in the registry.
-
-### Step 2: Read the Codebase
+### Read the Codebase
 
 Before designing, read the actual code that will be affected:
+
 - Entry points and module structure
 - Existing patterns and conventions
 - Dependencies and interfaces
 - Test infrastructure (if any)
 
-### Step 3: Write design.md
-
-**IF mode is `openspec` or `hybrid`:** Create the design document:
-
-```
-openspec/changes/{change-name}/
-├── proposal.md
-├── specs/
-└── design.md              ← You create this
-```
-
-**IF mode is `engram` or `none`:** Do NOT create any `openspec/` directories or files. Compose the design content in memory — you will persist it in Step 4.
-
-#### Design Document Format
+### Design Document Format
 
 ```markdown
 # Design: {Change Title}
@@ -152,36 +96,14 @@ If not applicable, state "No migration required."}
 - [ ] {Any decision that needs team input}
 ```
 
-### Step 4: Persist Artifact
+Record the finished design in the plan of the change.
 
-**This step is MANDATORY — do NOT skip it.**
-
-If mode is `engram`:
-```
-mem_save(
-  title: "sdd/{change-name}/design",
-  topic_key: "sdd/{change-name}/design",
-  type: "architecture",
-  project: "{project}",
-  content: "{your full design markdown from Step 3}"
-)
-```
-
-If mode is `openspec` or `hybrid`: the file was already written in Step 3.
-
-If mode is `hybrid`: also call `mem_save` as above (write to BOTH backends).
-
-If you skip this step, the next phase (sdd-tasks) will NOT be able to find your design and the pipeline BREAKS.
-
-### Step 5: Return Summary
-
-Return to the orchestrator:
+## Summary Format
 
 ```markdown
 ## Design Created
 
 **Change**: {change-name}
-**Location**: `openspec/changes/{change-name}/design.md` (openspec/hybrid) | Engram `sdd/{change-name}/design` (engram) | inline (none)
 
 ### Summary
 - **Approach**: {one-line technical approach}
@@ -193,7 +115,7 @@ Return to the orchestrator:
 {List any unresolved questions, or "None"}
 
 ### Next Step
-Ready for tasks (sdd-tasks).
+Ready for tasks.
 ```
 
 ## Rules
@@ -204,6 +126,5 @@ Ready for tasks (sdd-tasks).
 - Use the project's ACTUAL patterns and conventions, not generic best practices
 - If you find the codebase uses a pattern different from what you'd recommend, note it but FOLLOW the existing pattern unless the change specifically addresses it
 - Keep ASCII diagrams simple — clarity over beauty
-- Apply any `rules.design` from `openspec/config.yaml`
 - If you have open questions that BLOCK the design, say so clearly — don't guess
-- Return a structured envelope with: `status`, `executive_summary`, `detailed_report` (optional), `artifacts`, `next_recommended`, and `risks`
+- Record the design in the plan — the task breakdown builds on it
